@@ -111,7 +111,7 @@ TEXT
     APPLE "X="
     .byte   "#"
     APPLE    " Y="
-    .byte       "#"
+    .byte       "d"
     APPLE        " $="
     .byte           "x"
     APPLE            ":"
@@ -182,7 +182,7 @@ NextArg
 
 ; x Hex 2 Byte
 ; $ Hex 4 Byte
-; =-=-=-=-=-=-=-=-=-=-
+;========================================================================
 PrintHex4
         LDA #4
         BNE _PrintHex
@@ -222,16 +222,20 @@ HexNibbles
         CPX #0     ; _nHexNibbles NOTE: self-modifying!
         BNE _HexDigit
 
-PrintHexDigit
+;        PHX
+;        PLY
+; Intentional fall into reverse BCD
+
+PrintReverseBCD
         DEX
         BMI NextFormat
         LDA _bcd, X
         JSR PutChar
-        BRA PrintHexDigit
+        BRA PrintReverseBCD
 
 ; @ Ptr 2 Byte
 ; & Ptr 4 Byte
-; =-=-=-=-=-=-=-=-=-=-
+;========================================================================
 PrintPtr4
         LDA #4
         BNE _PrintPtr
@@ -259,8 +263,12 @@ _PrintPtr
 
 Print
         JSR PutChar
+
+; Adjust pointer to next char in format
 NextFormat
-        JSR IncFormat
+        INC _pFormat+0
+        BNE GetFormat
+        INC _pFormat+1
 GetFormat
         LDA $C0DE       ; _pFormat NOTE: self-modifying!
         BEQ _Done
@@ -282,9 +290,10 @@ _Done
 
 ; === Meta Ops ===
 
-; # Dec 1 Byte (max 3 digits)
-; d Dec 2 Byte (max 5 digits)
-; =-=-=-=-=-=-=-=-=-=-
+; # Dec 1 Byte (max 2 digits)
+; d Dec 2 Byte (max 3 digits)
+; u Dec 2 Byte (max 5 digits)
+;========================================================================
 PrintDec2
         LDA #2      ; skip first 2 digits
 _PrintDec
@@ -344,33 +353,17 @@ _BCD2Char
         DEX
         BPL _BCD2Char
 
-LDX _bcd+0
-LDY _bcd+1
-LDA _bcd+2
-STX $600
-STY $601
-STA $602
-RTS
-
 DecDigits
-        LDY #0      ; _DecDigits
-_PrintDecDigit
-        LDA _bcd,Y       
-        JSR PutChar
-        INY
-        CPY #6
-        BNE _PrintDecDigit
-_JumpNextFormat
-;        BRA NextFormat  ; always
-        JMP NextFormat  ; JMP :-(
+        LDX #0      ; _DecDigits
+        JMP PrintReverseBCD
 
 PrintDec4
-        LDA #0          ; skip 0 digits
+        LDA #4          ; skip 0 digits
         BNE _PrintDec   ; always
 
 ; % Bin 1 Byte normal  1
 ; d Bin 1 Byte inverse 1
-; =-=-=-=-=-=-=-=-=-=-
+;========================================================================
 PrintBinInv
         LDA #$81
         BNE _PrintBin
@@ -395,14 +388,27 @@ _FlipBit
         TAX
         DEY
         BNE _Bit2Asc
-        BRA _JumpNextFormat ; always
-        
+_JumpNextFormat
+;       BRA NextFormat  ; always
+        JMP NextFormat  ; JMP :-(
+
 /*
         JSR GetWidth
         JSR NxtArgXY GetArgAddr
         JSR ToBinX
         JSR PrintBuf
 */
+
+; =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+;DEBUG
+;LDX _bcd+0
+;LDY _bcd+1
+;LDA _bcd+2
+;STX $600
+;STY $601
+;STA $602
+;RTS
+; =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 ; === Utility ===
 /*
@@ -426,17 +432,20 @@ CmpMeta
         BRA IncWidth
 */
 
+;========================================================================
 PutChar
         STA $400        ; NOTE: self-modifying!
         INC PutChar+1   ; inc lo
         RTS
 
+;========================================================================
 ; @return &aArg[ iArg ] -> XY
 GetArgAddr
         LDX _pArg+0  ; Low  Byte
         LDY _pArg+1  ; High Byte
         RTS
 
+;========================================================================
 ; @return _Arg[ _Num ]
 NxtArgByte
         LDY #00         ; _iArg  NOTE: self-modifying!
@@ -448,6 +457,7 @@ IncArg
 @_SamePage
         RTS
 
+;========================================================================
 ; @return X,Y 16-bit arg value
 NxtArgXY
         JSR NxtArgByte
@@ -456,16 +466,6 @@ NxtArgXY
         TAY
         RTS
 
-; printf( format, ... )
-; Adjust pointer to next char in format
-IncFormat
-        INC _pFormat+0
-        BNE _SamePage
-        INC _pFormat+1
-_SamePage
-        RTS
-
-ToHexXY
 ; Hex2/Hex4 temp
 _bcd    ds  6   ; 6 chars for printing dec
 _val    dw  0
