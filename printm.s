@@ -1,4 +1,4 @@
-; Version 0.3
+; Version 0.4
 
 ; ca65
 .feature c_comments
@@ -66,41 +66,73 @@ $ 2-Byte Hex 2 chars
         .include "dos33.inc"
 
         HOME = $FC58
+        temp = $FF
 
-                JSR HOME
-                LDX #<DATA  ; Low  Byte of Address
-                LDY #>DATA  ; High Byte of Address
-                JSR PrintM
-                RTS
+        JSR HOME
+
+        LDA #$D5
+        STA $2345
+        STA DATA + $0C
+        JSR ReverseByte
+        STA DATA + $0E
+
+        LDX #<DATA  ; Low  Byte of Address
+        LDY #>DATA  ; High Byte of Address
+        JSR PrintM
+        RTS
+
+ReverseByte
+        LDX #8
+        STA temp
+ReverseBit
+        ASL temp
+        ROR
+        DEX
+        BNE ReverseBit
+        RTS
 
 TEXT
     ; TODO: macro to mark up non-literals as high-byte
     ;.byte  "X=## Y=## $=####:@@ %%%%%%%%~????????"
+    ;APPLE "X="
+    ;.byte   "$$"
+    ;APPLE     " Y="
+    ;.byte        "$$"
+    ;APPLE          " $="
+    ;.byte             "$$$$"
+    ;APPLE                 ":"
+    ;.byte                  "@@"
+    ;APPLE                    " "
+    ;.byte                     "%%%%%%%%"
+    ;APPLE                             "~" 
+    ;.byte                              "????????"
+    ;.byte 0
 
     APPLE "X="
-    .byte   "##"
-    APPLE     " Y="
-    .byte        "##"
-    APPLE          " $="
-    .byte             "####"
-    APPLE                 ":"
-    .byte                  "@@"
-    APPLE                    " "
-    .byte                     "%%%%%%%%"
-    APPLE                             "~" 
-    .byte                              "????????"
+    .byte   "#"
+    APPLE    " Y="
+    .byte       "#"
+    APPLE        " $="
+    .byte           "x"
+    APPLE            ":"
+    .byte             "@"
+    APPLE              " "
+    .byte               "%"
+    APPLE                "~" 
+    .byte                 "?"
     .byte 0
 
 DATA
     dw $0400    ; aArg[-1] Screen Dst
     dw TEXT     ; aArg[ 0] text
-    dw 39       ; aArg[ 1]
-    dw 191      ; aArg[ 2]
-    dw $3FF7    ; aArg[ 3]
-    dw $3FF7    ; aArg[ 4]
+    dw 39       ; aArg[ 1] x
+    dw 191      ; aArg[ 2] y
+    dw $2345    ; aArg[ 3] addr
+    dw $2345    ; aArg[ 4] byte
+    dw $DA1A    ; aArg[ 5] bits
+    dw $DA1A    ; aArg[ 6] bits
 
-SetArg
-    rts
+    ds 256 - <*
 
 /*
 printf() on the 6502
@@ -133,6 +165,7 @@ a 16-bit address for the assembler
         _nHexNibbles = HexNibbles+1
 
 ; printm( format, args, ... )
+; =-=-=-=-=-=-=-=-=-=-
 PrintM
         STX _pArg+0
         STY _pArg+1
@@ -146,6 +179,53 @@ NextArg
         STX _pFormat+0  ; lo
         STY _pFormat+1  ; hi
         BRA GetFormat   ; always
+
+
+; x Hex 2 Byte
+; $ Hex 4 Byte
+; =-=-=-=-=-=-=-=-=-=-
+PrintHex4
+        LDA #4
+        BNE _PrintHex
+PrintHex2
+        LDA #2
+_PrintHex
+        STA _nHexNibbles
+        JSR NxtArgXY
+_PrintHexXY
+        JSR ToHexXY
+        BRA NextFormat  ; always
+
+; @ Ptr 2 Byte
+; & Ptr 4 Byte
+; =-=-=-=-=-=-=-=-=-=-
+PrintPtr4
+        LDA #4
+        BNE _PrintPtr
+PrintPtr2
+        LDA #2
+_PrintPtr
+        STA _nHexNibbles
+        JSR NxtArgXY
+
+STX $500
+STY $501
+
+        STX $01
+        STY $02
+        LDY #$0
+        LDA ($01),Y
+        TAX
+        INY
+        LDA ($01),Y
+        TAY
+
+STX $502
+STY $503
+;RTS
+        BRA _PrintHexXY ; always
+
+
 Print
         JSR PutChar
 NextFormat
@@ -171,64 +251,122 @@ _Done
 
 ; === Meta Ops ===
 
-PrintHex4
-/*
-        JSR GetWidth
-        JSR GetArgAddr
-        LDX #0
-        JSR ToHexXY
-        JSR PrintBuf
-*/
-        LDA #5
-        BNE _PrintHex2
-PrintHex2
-        LDA #3
-_PrintHex2
-        STA _nHexNibbles
-/*
-        JSR GetWidth
-        JSR GetArgAddr
-        LDX #0
-        JSR ToHexXY
-        JSR PrintBuf
-*/
-        BRA NextFormat  ; always
-
-PrintPtr2
-/*
-        JSR GetWidth
-        JSR GetArgAddr
-        STX GetByte+1
-        STY GetByte+2
-GetByte LDA $C0DE
-        JSR ToHexXY
-        JSR PrintBuf
-*/
-        BRA NextFormat  ; always
-
+; # Dec 1 Byte (max 3 digits)
+; d Dec 2 Byte (max 5 digits)
+; =-=-=-=-=-=-=-=-=-=-
 PrintDec2
-/*
-        JSR GetWidth
-        JSR GetArgAddr
-        JSR ToDecX
-        JSR PrintBuf
-*/
-        BRA NextFormat  ; always
+        LDA #2      ; skip first 2 digits
+_PrintDec
+        STA DecDigits+1
+        JSR NxtArgXY
+PrintDecXY
+        STX _val+0
+        STY _val+1
 
+        STZ _bcd+0
+        STZ _bcd+1
+        STZ _bcd+2
+
+DecToBCD
+        LDX   #16
+        SED
+@_a
+        ASL _val+0
+        ROl _val+1
+
+        LDA _bcd+0
+        ADC _bcd+0
+        STA _bcd+0
+
+        LDA _bcd+1
+        ADC _bcd+1
+        STA _bcd+1
+
+        LDA _bcd+2
+        ADC _bcd+2
+        STA _bcd+2
+
+        DEX
+        BNE @_a
+        CLD
+
+BCDToChar
+        LDX #2
+        LDY #5
+@_b
+        LDA _bcd,X  ; ab?def    a?_dXX  ?_YYXX
+        LSR
+        LSR
+        LSR
+        LSR
+        CLC
+        ADC #'0' + $80
+        STA _bcd,Y  ; ab?deX    a?_YXX  ?ZYYXX
+        DEY
+
+        LDA _bcd,X  ; ab?deX    a?_YXX  ?ZYYXX
+        AND #$F
+        CLC
+        ADC #'0' + $80
+        STA _bcd,Y  ; ab?dXX    a?YYXX  ZZYYXX
+        DEY
+        DEX
+        BPL @_b
+
+DecDigits
+        LDY #0      ; _DecDigits
+_PrintDecDigit
+        LDA _bcd,Y       
+        JSR PutChar
+        INY
+        CPY #6
+        BNE _PrintDecDigit
+_JumpNextFormat
+;        BRA NextFormat  ; always
+        JMP NextFormat  ; JMP :-(
+
+PrintDec4
+        LDA #0          ; skip 0 digits
+        BNE _PrintDec   ; always
+
+; % Bin 1 Byte normal  1
+; d Bin 1 Byte inverse 1
+; =-=-=-=-=-=-=-=-=-=-
+PrintBinInv
+        LDA #$81
+        BNE _PrintBin
 PrintBinAsc
+        LDA #$01
+_PrintBin
+        STA _PrintBit+1
+        JSR NxtArgXY
+
+        LDY #8          ; print 8 bits
+        TXA
+_Bit2Asc
+        AND #$01            ; 0 -> B0
+        BEQ _FlipBit
+_PrintBit
+        LDA #$81            ; 1 -> 31 NOTE: self-modifying!
+_FlipBit
+        EOR #$B0
+        JSR PutChar
+        TXA
+        LSR
+        TAX
+        DEY
+        BNE _Bit2Asc
+        BRA _JumpNextFormat ; always
+        
 /*
         JSR GetWidth
-        JSR GetArgAddr
+        JSR NxtArgXY GetArgAddr
         JSR ToBinX
         JSR PrintBuf
 */
-        BRA NextFormat  ; always
-
-PrintBinInv
-        BRA NextFormat  ; always
-
 
 ; === Utility ===
+/*
 _CmpMeta = CmpMeta+1
 
 GetWidth
@@ -247,6 +385,7 @@ CmpMeta
         BNE _Done       ; optimization: re-use RTS
         INY
         BRA IncWidth
+*/
 
 PutChar
         STA $400        ; NOTE: self-modifying!
@@ -290,16 +429,15 @@ IncFormat
 ToHexXY
         STX _val+0
         STY _val+1
-        LDA _val+0
         LDX #0
 _HexDigit
+        LDA _val+0
         AND #$F
         CMP #$A         ; n < 10 ?
         BCC @_DecDigit
         ADC #6          ; n += 6    $A -> +6 + (C=1) = $11
 @_DecDigit
-        ADC #'0'
-        ORA #$80
+        ADC #'0' + $80  ; inverse=remove #$80
         JSR PutChar
                         ; 16-bit SHR nibble
         LSR _val+1
@@ -320,30 +458,31 @@ HexNibbles
         BNE _HexDigit
         RTS
 
-ToDecX
-        RTS
-ToBin
-        RTS
-
 ; Hex2/Hex4 temp
-_buf    ds  8   ; 8 chars for printing binary
+_bcd    ds  6   ; 6 chars for printing dec
 _val    dw  0
 
 MetaChar
+        db '&'  ; PrintPtr4
+        db '@'  ; PrintPtr2
         db '?'  ; PrintBinInv
         db '%'  ; PrintBinAsc
+        db 'd'  ; PrintDec4
         db '#'  ; PrintDec2
         db '$'  ; PrintHex2
-;        db 'd'  ; PrintDec5
-;        db 'x'  ; PrintHex4
+        db 'x'  ; PrintHex4
 
 _MetaCharEnd
 NumMeta = _MetaCharEnd - MetaChar
 
 MetaFunc
+        dw PrintPtr4
+        dw PrintPtr2
         dw PrintBinInv
         dw PrintBinAsc
+        dw PrintDec4
         dw PrintDec2
+        dw PrintHex2
         dw PrintHex4
 __END
 
