@@ -180,7 +180,6 @@ NextArg
         STY _pFormat+1  ; hi
         BRA GetFormat   ; always
 
-
 ; x Hex 2 Byte
 ; $ Hex 4 Byte
 ; =-=-=-=-=-=-=-=-=-=-
@@ -193,8 +192,42 @@ _PrintHex
         STA _nHexNibbles
         JSR NxtArgXY
 _PrintHexXY
-        JSR ToHexXY
-        BRA NextFormat  ; always
+        STX _val+0
+        STY _val+1
+        LDX #0
+_HexDigit
+        LDA _val+0
+        AND #$F
+        CMP #$A         ; n < 10 ?
+        BCC _Hex2Asc
+        ADC #6          ; n += 6    $A -> +6 + (C=1) = $11
+_Hex2Asc
+        ADC #'0' + $80  ; inverse=remove #$80
+        STA _bcd, X     ; NOTE: Digits are reversed!
+
+        LSR _val+1      ; 16-bit SHR nibble
+        ROR _val+0
+
+        LSR _val+1
+        ROR _val+0
+
+        LSR _val+1
+        ROR _val+0
+
+        LSR _val+1
+        ROR _val+0
+
+        INX
+HexNibbles
+        CPX #0     ; _nHexNibbles NOTE: self-modifying!
+        BNE _HexDigit
+
+PrintHexDigit
+        DEX
+        BMI NextFormat
+        LDA _bcd, X
+        JSR PutChar
+        BRA PrintHexDigit
 
 ; @ Ptr 2 Byte
 ; & Ptr 4 Byte
@@ -208,8 +241,8 @@ _PrintPtr
         STA _nHexNibbles
         JSR NxtArgXY
 
-STX $500
-STY $501
+;STX $500
+;STY $501
 
         STX $01
         STY $02
@@ -220,11 +253,9 @@ STY $501
         LDA ($01),Y
         TAY
 
-STX $502
-STY $503
-;RTS
+;STX $502
+;STY $503
         BRA _PrintHexXY ; always
-
 
 Print
         JSR PutChar
@@ -267,10 +298,10 @@ PrintDecXY
         STZ _bcd+1
         STZ _bcd+2
 
-DecToBCD
+Dec2BCD
         LDX   #16
         SED
-@_a
+_Dec2BCD
         ASL _val+0
         ROl _val+1
 
@@ -287,13 +318,13 @@ DecToBCD
         STA _bcd+2
 
         DEX
-        BNE @_a
+        BNE _Dec2BCD
         CLD
 
-BCDToChar
+BCD2Char
         LDX #2
         LDY #5
-@_b
+_BCD2Char
         LDA _bcd,X  ; ab?def    a?_dXX  ?_YYXX
         LSR
         LSR
@@ -311,7 +342,15 @@ BCDToChar
         STA _bcd,Y  ; ab?dXX    a?YYXX  ZZYYXX
         DEY
         DEX
-        BPL @_b
+        BPL _BCD2Char
+
+LDX _bcd+0
+LDY _bcd+1
+LDA _bcd+2
+STX $600
+STY $601
+STA $602
+RTS
 
 DecDigits
         LDY #0      ; _DecDigits
@@ -421,43 +460,12 @@ NxtArgXY
 ; Adjust pointer to next char in format
 IncFormat
         INC _pFormat+0
-        BNE @_SamePage
+        BNE _SamePage
         INC _pFormat+1
-@_SamePage
+_SamePage
         RTS
 
 ToHexXY
-        STX _val+0
-        STY _val+1
-        LDX #0
-_HexDigit
-        LDA _val+0
-        AND #$F
-        CMP #$A         ; n < 10 ?
-        BCC @_DecDigit
-        ADC #6          ; n += 6    $A -> +6 + (C=1) = $11
-@_DecDigit
-        ADC #'0' + $80  ; inverse=remove #$80
-        JSR PutChar
-                        ; 16-bit SHR nibble
-        LSR _val+1
-        ROR _val+0
-
-        LSR _val+1
-        ROR _val+0
-
-        LSR _val+1
-        ROR _val+0
-
-        LSR _val+1
-        ROR _val+0
-
-        INX
-HexNibbles
-        CPX #5     ; _nHexNibbles NOTE: self-modifying!
-        BNE _HexDigit
-        RTS
-
 ; Hex2/Hex4 temp
 _bcd    ds  6   ; 6 chars for printing dec
 _val    dw  0
