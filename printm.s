@@ -1,4 +1,4 @@
-; Version 0.4
+; Version 0.7
 
 ; ca65
 .feature c_comments
@@ -165,7 +165,7 @@ a 16-bit address for the assembler
         _nHexNibbles = HexNibbles+1
 
 ; printm( format, args, ... )
-; =-=-=-=-=-=-=-=-=-=-
+;========================================================================
 PrintM
         STX _pArg+0
         STY _pArg+1
@@ -219,13 +219,11 @@ _Hex2Asc
 
         INX
 HexNibbles
-        CPX #0     ; _nHexNibbles NOTE: self-modifying!
+        CPX #0          ; _nHexNibbles NOTE: self-modifying!
         BNE _HexDigit
+                        ; Intentional fall into reverse BCD
 
-;        PHX
-;        PLY
-; Intentional fall into reverse BCD
-
+;========================================================================
 PrintReverseBCD
         DEX
         BMI NextFormat
@@ -245,9 +243,6 @@ _PrintPtr
         STA _nHexNibbles
         JSR NxtArgXY
 
-;STX $500
-;STY $501
-
         STX $01
         STY $02
         LDY #$0
@@ -256,11 +251,9 @@ _PrintPtr
         INY
         LDA ($01),Y
         TAY
-
-;STX $502
-;STY $503
         BRA _PrintHexXY ; always
 
+;========================================================================
 Print
         JSR PutChar
 
@@ -294,8 +287,14 @@ _Done
 ; d Dec 2 Byte (max 3 digits)
 ; u Dec 2 Byte (max 5 digits)
 ;========================================================================
+PrintDec5
+        LDA #5
+        BNE _PrintDec   ; always
+PrintDec3
+        LDA #3
+        BNE _PrintDec   ; always
 PrintDec2
-        LDA #2      ; skip first 2 digits
+        LDA #2          ; 2 digits
 _PrintDec
         STA DecDigits+1
         JSR NxtArgXY
@@ -357,9 +356,6 @@ DecDigits
         LDX #0      ; _DecDigits
         JMP PrintReverseBCD
 
-PrintDec4
-        LDA #4          ; skip 0 digits
-        BNE _PrintDec   ; always
 
 ; % Bin 1 Byte normal  1
 ; d Bin 1 Byte inverse 1
@@ -399,18 +395,8 @@ _JumpNextFormat
         JSR PrintBuf
 */
 
-; =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-;DEBUG
-;LDX _bcd+0
-;LDY _bcd+1
-;LDA _bcd+2
-;STX $600
-;STY $601
-;STA $602
-;RTS
-; =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+; ___ Utility ___
 
-; === Utility ===
 /*
 _CmpMeta = CmpMeta+1
 
@@ -466,7 +452,7 @@ NxtArgXY
         TAY
         RTS
 
-; Hex2/Hex4 temp
+                ; Hex2/Hex4 temp
 _bcd    ds  6   ; 6 chars for printing dec
 _val    dw  0
 
@@ -475,7 +461,8 @@ MetaChar
         db '@'  ; PrintPtr2
         db '?'  ; PrintBinInv
         db '%'  ; PrintBinAsc
-        db 'd'  ; PrintDec4
+        db 'u'  ; PrintDec5
+        db 'd'  ; PrintDec3
         db '#'  ; PrintDec2
         db '$'  ; PrintHex2
         db 'x'  ; PrintHex4
@@ -488,7 +475,8 @@ MetaFunc
         dw PrintPtr2
         dw PrintBinInv
         dw PrintBinAsc
-        dw PrintDec4
+        dw PrintDec5
+        dw PrintDec3
         dw PrintDec2
         dw PrintHex2
         dw PrintHex4
