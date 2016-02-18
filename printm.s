@@ -1,9 +1,10 @@
-; Version 12
-
 ; ca65
 .feature c_comments
 
-/*
+/* Version 13
+printm - a printf replacement for 6502
+Michael Pohroeski
+
 
 Problem:
 We want to print this:
@@ -59,8 +60,6 @@ ENABLE_BYTE  = 0    ; requires ENABLE_DEC
 ENABLE_HEX   = 0
 ENABLE_PTR   = 1    ; requires ENABLE_HEX
 ENABLE_STR   = 1
-
-
 
 
 .feature labels_without_colons
@@ -166,18 +165,23 @@ _HgrAddr
         JSR ReverseByte
         STA DATA+12
 
+.if ENABLE_BIN || ENABLE_DEC || ENABLE_HEX
         LDY #0
         JSR VTABY
         LDX #<DATA  ; Low  Byte of Address
         LDY #>DATA  ; High Byte of Address
         JSR PrintM
+.endif
 
+.if ENABLE_BYTE
         LDY #2
         JSR VTABY
         LDX #<DATA2
         LDY #>DATA2
         JSR PrintM
+.endif  ; ENABLE_BYTE
 
+.if ENABLE_STR
         LDY #4
         JSR VTABY
         LDX #<DATA3
@@ -189,6 +193,7 @@ _HgrAddr
         LDX #<DATA4
         LDY #>DATA4
         JSR PrintM
+.endif  ; ENABLE_STR
 
         LDA #8
         JMP TABV
@@ -243,7 +248,7 @@ TEXT
     .byte             "@"
     APPLE              " "
     .byte               "%"
-    APPLE                "~" 
+    APPLE                "~"
     .byte                 "?"
     .byte 0
 
@@ -322,7 +327,7 @@ DATA4
     ds 256 - <*
 
 
-; Self-Modifying variable aliases
+; self-modifying variable aliases
 
         _pScreen     = PutChar   +1
         _pFormat     = GetFormat +1
@@ -340,7 +345,7 @@ DATA4
 PrintM
         STX _pArg+0
         STY _pArg+1
-        STZ _iArg    
+        STZ _iArg
 
 NextArg
         JSR NxtArgYX
@@ -421,7 +426,7 @@ _PrintPtr
         JSR NxtArgToTemp
 
 ;       JSR NxtArgYX
-; 13 bytes - zero page version
+; 13 bytes: zero page version
 ;       STX _temp+0     ; zero-page for (ZP),Y
 ;       STY _temp+1
         LDY #$0
@@ -431,7 +436,7 @@ _PrintPtr
         LDA (_temp),Y
         TAY
 
-; 20 bytes - self modifying code version if zero-page not available
+; 20 bytes: self-modifying code version if zero-page not available
 ;        STX PtrVal+1
 ;        STY PtrVal+2
 ;        LDY #0          ; 0: A->X
@@ -463,6 +468,7 @@ GetFormat
         LDA $C0DE       ; _pFormat NOTE: self-modifying!
         BEQ _Done
         BMI Print       ; neg = literal
+; NOTE: If all features are turned off, will get a ca65 Range Error
         LDX #NumMeta-1  ; pos = meta
 FindMeta
         CMP MetaChar,X
@@ -552,7 +558,7 @@ _BCD2Char
         BPL _BCD2Char
 
 DecWidth
-        LDX #0      ; _nDecDigits NOTE: self modifying!
+        LDX #0      ; _nDecDigits NOTE: self-modifying!
         JMP PrintReverseBCD
 .endif  ; ENABLE_DEC
 
@@ -576,10 +582,10 @@ _Bit2Asc
         CMP #$80        ; C= A>=$80
         ROL             ; C<-76543210<-C
         TAX
-        AND #$01            ; 0 -> B0
+        AND #$01        ; 0 -> B0
         BEQ _FlipBit
 _PrintBit
-        LDA #$81            ; 1 -> 31 NOTE: self-modifying!
+        LDA #$81        ; 1 -> 31 NOTE: self-modifying!
 _FlipBit
         EOR #$B0
         JSR PutChar
@@ -676,7 +682,7 @@ _PrintCharA
 
 ; ======================================================================
 PutChar
-        STA $400        ; NOTE: self-modifying!
+        STA $C0DE       ; _pScreen NOTE: self-modifying!
         INC PutChar+1   ; inc lo
         RTS
 
@@ -689,10 +695,10 @@ NxtArgYX
 
 ; @return _Arg[ _Num ]
 NxtArgByte
-        LDY #00         ; _iArg  NOTE: self-modifying!
+        LDY #00         ; _iArg NOTE: self-modifying!
 IncArg
         LDA $C0DE,Y     ; _pArg NOTE: self-modifying!
-        INC _iArg       ;       
+        INC _iArg       ;
         BNE @_SamePage
         INC _pArg+1     ;
 @_SamePage
@@ -709,7 +715,7 @@ _NxtArgToTemp
 
         RTS
 
-; 
+;
 ; ======================================================================
 
 _bcd    ds  6   ; 6 chars for printing dec
