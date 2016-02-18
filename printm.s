@@ -1,4 +1,4 @@
-; Version 9
+; Version 10
 
 ; ca65
 .feature c_comments
@@ -65,6 +65,11 @@
         LDX #<DATA  ; Low  Byte of Address
         LDY #>DATA  ; High Byte of Address
         JSR PrintM
+
+        LDX #<DATA2
+        LDY #>DATA2
+        JSR PrintM
+
         RTS
 
 ReverseByte
@@ -78,7 +83,7 @@ ReverseBit
         RTS
 
 TEXT
-
+    ;byte "X=## Y=ddd $=xxxx:@@ %%%%%%%%~????????"
     APPLE "X="
     .byte   "#"
     APPLE    " Y="
@@ -103,13 +108,47 @@ DATA
     dw $DA1A    ; aArg[ 5] bits
     dw $DA1A    ; aArg[ 6] bits
 
+TEXT2
+    ;byte "Byte=b b b b Str=s,s"
+    APPLE "Byte="
+    .byte      "b"
+    APPLE       " "
+    .byte        "b"
+    APPLE         " "
+    .byte          "b"
+    APPLE           " "
+    .byte            "b"
+    APPLE             " Str="
+    .byte                  "s"
+    APPLE                   ","
+    .byte                    "s"
+    db 0
+
+TEXT_HELLO
+    APPLE "HELLO "
+    db 0
+
+TEXT_WORLD
+    APPLE "HELLO "
+    db 0
+    
+DATA2
+    dw $0500    ; Screen Dst 
+    dw TEXT2
+    dw $80      ; -128
+    dw $FF      ; -1
+    dw $00      ;  0
+    dw $7F      ; +127
+    dw TEXT_HELLO
+    dw TEXT_WORLD
+
+; Pad until end of page so PrintM starts on new page
     ds 256 - <*
 
-/*
+
 
 /*
 Problem:
-
 We want to print this ...
     
     .byte "X=## Y=### $=####:@@ %%%%%%%%~????????"
@@ -171,11 +210,11 @@ PrintM
         STY _pArg+1
         STZ _iArg    
 
-        JSR NxtArgXY
+        JSR NxtArgYX
         STX _pScreen+0  ; lo
         STY _pScreen+1  ; hi
 NextArg
-        JSR NxtArgXY
+        JSR NxtArgYX
         STX _pFormat+0  ; lo
         STY _pFormat+1  ; hi
         BRA GetFormat   ; always
@@ -190,7 +229,7 @@ PrintHex2
         LDA #2
 _PrintHex
         STA _nHexWidth
-        JSR NxtArgXY
+        JSR NxtArgYX
 
 ; Print 16-bit Y,X in hex
 ; Uses _nHexWidth to limit output width
@@ -246,7 +285,7 @@ PrintPtr2
         LDA #2
 _PrintPtr
         STA _nHexWidth
-        JSR NxtArgXY
+        JSR NxtArgYX
 
 ; 13 bytes - zero page version
         STX temp+0      ; zero-page for (ZP),Y
@@ -318,7 +357,7 @@ PrintDec2
         LDA #2          ; 2 digits
 _PrintDec
         STA _nDecWidth
-        JSR NxtArgXY
+        JSR NxtArgYX
 
 PrintDecYX
         STX _val+0
@@ -355,21 +394,21 @@ BCD2Char
         LDX #2
         LDY #5
 _BCD2Char
-        LDA _bcd,X  ; ab?def    a?_dXX  ?_YYXX
+        LDA _bcd,X  ; __c???    _b_?XX  a_YYXX
         LSR
         LSR
         LSR
         LSR
         CLC
-        ADC #'0' + $80
-        STA _bcd,Y  ; ab?deX    a?_YXX  ?ZYYXX
+        ADC #'0'+$80
+        STA _bcd,Y  ; __c??X    _b_YXX  aZYYXX
         DEY
 
-        LDA _bcd,X  ; ab?deX    a?_YXX  ?ZYYXX
+        LDA _bcd,X  ; __c??X    _b_YXX  aZYYXX
         AND #$F
         CLC
-        ADC #'0' + $80
-        STA _bcd,Y  ; ab?dXX    a?YYXX  ZZYYXX
+        ADC #'0'+$80
+        STA _bcd,Y  ; __c?XX    _bYYXX  ZZYYXX
         DEY
         DEX
         BPL _BCD2Char
@@ -389,7 +428,7 @@ PrintBinAsc
         LDA #$01
 _PrintBin
         STA _PrintBit+1
-        JSR NxtArgXY    ; X = low byte
+        JSR NxtArgYX    ; X = low byte
 
         LDY #8          ; print 8 bits
 _Bit2Asc
@@ -410,28 +449,74 @@ _JumpNextFormat
 ;       BRA NextFormat  ; always
         JMP NextFormat  ; JMP :-(
 
-; ___ Utility ___
 
-/*
-_CmpMeta = CmpMeta+1
+; ======================================================================
+PrintByte
+; JMP PrintHex4   ; DEBUG
 
-GetWidth
-        STA _CmpMeta    ; save last meta
-        LDA _pFormat+0  ; Src.Lo
-        LDY _pFormat+1  ; Src.Hi
-        STA IncWidth+1  ; Dst.Lo
-        STY IncWidth+2  ; Dst.Hi
+        JSR NxtArgYX    ; X = low byte
+        TXA
+        BPL PrintBytePos
+        LDA #'-' + $80  ; X >= $80 --> $80 (-128) .. $FF (-1)
+        JSR PutChar
+        TXA
+        EOR #$FF        ; 2's complement
+        AND #$7F
+        CLC
+        ADC #$01
+PrintBytePos
+        TAX
 
-        LDY #0
-IncWidth
-        LDA $C0DE,Y     ; NOTE: self-modifying!
-        STY _nHexWidth
-CmpMeta
-        CMP #$00        ; _CmpMeta NOTE: self-modifying!
-        BNE _Done       ; optimization: re-use RTS
+        LDY #00         ; 00XX
+        LDA #3          ; 3 digits max
+        STA _nDecWidth
+        JMP PrintDecYX
+
+; ======================================================================
+PrintStrP
+; JMP PrintHex4   ; DEBUG
+
+        JSR NxtArgYX    ; X = low byte
+        STX temp+0      ; zero-page for (ZP),Y
+        STY temp+1
+
+        LDY #$0
+        LDA (temp),Y
+        TAX
+_PrintStrP
         INY
-        BRA IncWidth
-*/
+        LDA (temp),Y
+        JSR PutChar
+        DEX
+        BNE _PrintStrP
+        BEQ _JumpNextFormat ; always
+
+; ======================================================================
+PrintStrC
+JMP PrintHex4   ; DEBUG
+
+        JSR NxtArgYX    ; X = low byte
+        STX temp+0      ; zero-page for (ZP),Y
+        DEY
+        STY temp+1
+
+; We could use BIT $ABS to skip next INC temp+1 instruction
+; but since we need to waste a byte anyways
+; we use a DEY instead
+;        .byte $2C       ; BIT $abs -- skip next instruction
+@_NextPage
+        INC temp+1
+
+        LDY #$0
+@_NextByte
+        LDA (temp),Y
+        BEQ _JumpNextFormat
+        JSR PutChar
+        INC temp+0
+        BNE @_NextByte
+        BEQ @_NextPage
+
+; __________ Utility __________
 
 ; ======================================================================
 PutChar
@@ -439,14 +524,12 @@ PutChar
         INC PutChar+1   ; inc lo
         RTS
 
-; @return &aArg[ iArg ] -> XY
 ; ======================================================================
-GetArgAddr
-        LDX _pArg+0  ; Low  Byte
-        LDY _pArg+1  ; High Byte
-        RTS
+; @return next arg as 16-bit arg value in Y,X
+NxtArgYX
+        JSR NxtArgByte
+        TAX
 
-; ======================================================================
 ; @return _Arg[ _Num ]
 NxtArgByte
         LDY #00         ; _iArg  NOTE: self-modifying!
@@ -456,14 +539,7 @@ IncArg
         BNE @_SamePage
         INC _pArg+1     ;
 @_SamePage
-        RTS
 
-; ======================================================================
-; @return X,Y 16-bit arg value
-NxtArgXY
-        JSR NxtArgByte
-        TAX
-        JSR NxtArgByte
         TAY
         RTS
 
@@ -476,6 +552,9 @@ MetaChar
         db '@'  ; PrintPtr2
         db '?'  ; PrintBinInv
         db '%'  ; PrintBinAsc
+        db 'b'  ; PrintByte      NOTE: Signed -128 .. +127
+        db 'p'  ; PrintStrP      NOTE: Pascal string; C printf 'p' is pointer!
+        db 's'  ; PrintStrC      NOTE: C string, zero terminated
         db 'u'  ; PrintDec5
         db 'd'  ; PrintDec3
         db '#'  ; PrintDec2
@@ -490,6 +569,9 @@ MetaFunc
         dw PrintPtr2
         dw PrintBinInv
         dw PrintBinAsc
+        dw PrintByte
+        dw PrintStrP
+        dw PrintStrC
         dw PrintDec5
         dw PrintDec3
         dw PrintDec2
