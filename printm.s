@@ -1,7 +1,68 @@
-; Version 11
+; Version 12
 
 ; ca65
 .feature c_comments
+
+/*
+
+Problem:
+We want to print this:
+
+    .byte "X=## Y=### $=####:@@ %%%%%%%%~????????"
+
+without having to waste marking up literals with an escape character
+
+Why printf() on the 6502 sucks:
+
+- is bloated by using a meta-character '%' instead of the high bit
+- doesn't provide a standard way to print binary *facepalm*
+- doesn't provide a standard way to print a deferenced pointer
+- 2 digit, 3 digit and 5 digit decimals requiring wasting "width" characters
+  e.g. %2d, %3d, %5d
+  When a single character would work instead.
+
+Solution:
+
+Here is a micro replacement, printm()
+
+* Literals have the high byte set (APPLE text)
+* Meta characters have the high bit cleared (ASCII)
+
+    x Hex - print 2 Byte
+    $ Hex - print 4 Byte
+
+    @ Ptr - print hex byte at 16-bit pointer
+    & Ptr - print hex word at 16-bit pointer
+
+    # Dec - Print 1 Byte in decimal (max 2 digits)
+    d Dec - Print 2 Byte in decimal (max 3 digits)
+    u Dec - Print 2 Byte in decimal (max 5 digits)
+    b Dec - Print signed byte
+
+    % Bin 1 Byte
+    ? Bin 1 Byte but 1's are printed in inverse
+
+    a Str - APPLE text (high bit set), last char is ASCII
+    s Str - C string, zero terminated
+    p Str - Pascal string, first character is string length
+
+Note: The dummy address $C0DE is to force the assembler
+to generate a 16-bit address instead of optimizing a ZP operand
+
+To toggle features on / off:
+
+*/
+
+ENABLE_BIN   = 0
+ENABLE_DEC   = 0
+ENABLE_BYTE  = 0    ; requires ENABLE_DEC
+ENABLE_HEX   = 0
+ENABLE_PTR   = 1    ; requires ENABLE_HEX
+ENABLE_STR   = 1
+
+
+
+
 .feature labels_without_colons
 .feature leading_dot_in_identifiers
 ; 65C02
@@ -260,61 +321,6 @@ DATA4
 ; Pad until end of page so PrintM starts on new page
     ds 256 - <*
 
-/*
-
-Problem:
-We want to print this ...
-
-    .byte "X=## Y=### $=####:@@ %%%%%%%%~????????"
-
-... without having to waste marking up literals with an escape character
-
-
-printf() on the 6502
-
-- is bloated by using a meta-character '%' instead of the high bit
-- doesn't provide a standard way to print binary *facepalm*
-- doesn't provide a standard way to print a deferenced pointer
-- 2 digit, 3 digit and 5 digit decimals requiring wasting a "width" character
-  e.g. %2d, %3d, %5d
-
-Solution:
-
-Here is a micro replacement, printm()
-
-* Literals have the high byte set (APPLE text)
-* Meta characters have the high bit cleared (ASCII)
-
-    x Hex 2 Byte
-    $ Hex 4 Byte
-
-    @ Ptr 2 Byte at pointer
-    & Ptr 4 Byte at pointer
-
-    # Dec 1 Byte (max 2 digits)
-    d Dec 2 Byte (max 3 digits)
-    u Dec 2 Byte (max 5 digits)
-
-    % Bin 1 Byte normal  one's and zeros
-    ? Bin 1 Byte inverse one's, normal zeroes
-
-    a Str - APPLE text (high bit set), last char is ASCII
-    s Str - C string, zero terminated
-    p Str - Pascal string, first character is string length
-
-Note: The dummy address $C0DE is to force the assembler
-to generate a 16-bit address instead of optimizing a ZP operand
-
-To toggle features on / off
-*/
-
-ENABLE_BIN   = 1
-ENABLE_DEC   = 1
-ENABLE_BYTE  = 1
-ENABLE_HEX   = 1
-ENABLE_PTR   = 1
-ENABLE_STR   = 1
-
 
 ; Self-Modifying variable aliases
 
@@ -322,8 +328,12 @@ ENABLE_STR   = 1
         _pFormat     = GetFormat +1
         _iArg        = NxtArgByte+1
         _pArg        = IncArg    +1
+.if ENABLE_HEX
         _nHexWidth   = HexWidth  +1
+.endif
+.if ENABLE_DEC
         _nDecWidth   = DecWidth  +1
+.endif ; ENABLE_DEC
 
 ; printm( format, args, ... )
 ; ======================================================================
@@ -337,6 +347,8 @@ NextArg
         STX _pFormat+0  ; lo
         STY _pFormat+1  ; hi
         BRA GetFormat   ; always
+
+.if ENABLE_HEX
 
 ; x Hex 2 Byte
 ; $ Hex 4 Byte
@@ -395,6 +407,7 @@ PrintReverseBCD
         BRA PrintReverseBCD
 
 
+    .if ENABLE_PTR
 ; @ Ptr 2 Byte
 ; & Ptr 4 Byte
 ; ======================================================================
@@ -433,6 +446,9 @@ _PrintPtr
 ;        TAY
 
         BRA PrintHexYX  ; needs XYtoVal setup
+    .endif  ; ENABLE_PTR
+.endif  ; ENABLE_HEX
+
 
 ; ======================================================================
 Print
@@ -464,6 +480,7 @@ _Done
 
 ; === Meta Ops ===
 
+.if ENABLE_DEC
 ; # Dec 1 Byte (max 2 digits)
 ; d Dec 2 Byte (max 3 digits)
 ; u Dec 2 Byte (max 5 digits)
@@ -537,10 +554,10 @@ _BCD2Char
 DecWidth
         LDX #0      ; _nDecDigits NOTE: self modifying!
         JMP PrintReverseBCD
+.endif  ; ENABLE_DEC
 
 
 .if ENABLE_BIN
-
 ; % Bin 1 Byte normal  one's and zeros
 ; ? Bin 1 Byte inverse one's, normal zeroes
 ; ======================================================================
@@ -568,14 +585,16 @@ _FlipBit
         JSR PutChar
         DEY
         BNE _Bit2Asc
+.endif  ; ENABLE_BIN
+
 _JumpNextFormat
 ;       BRA NextFormat  ; always
         JMP NextFormat  ; JMP :-(
-.endif  ; ENABLE_BIN
-
 
 ; b Print a signed byte in decimal
 ; ======================================================================
+.if ENABLE_DEC
+    .if ENABLE_BYTE
 PrintByte
         JSR NxtArgYX    ; X = low byte
         TXA
@@ -594,9 +613,11 @@ PrintBytePos
         LDA #3          ; 3 digits max
         STA _nDecWidth
         JMP PrintDecYX  ; needs XYtoVal setup
+    .endif ; ENABLE_BYTE
+.endif  ; ENABLE_DEC
+
 
 .if ENABLE_STR
-
 ; a String (APPLE text, last byte ASCII)
 ; See: DCI
 ; ======================================================================
@@ -635,7 +656,6 @@ PrintStrC
 ; p String (Pascal)
 ; ======================================================================
 PrintStrP
-; JMP PrintHex4   ; DEBUG
         JSR NxtArgToTemp
 
         LDY #$0
@@ -650,8 +670,7 @@ _PrintCharA
         DEX
         BNE _PrintStrP
         BEQ _JumpNextFormat ; always
-
-.endif ; ENABLE_STR
+.endif  ; ENABLE_STR
 
 ; __________ Utility __________
 
@@ -693,9 +712,8 @@ _NxtArgToTemp
 ; 
 ; ======================================================================
 
-                ; Hex2/Hex4 temp
 _bcd    ds  6   ; 6 chars for printing dec
-_val    dw  0
+_val    dw  0   ; PrintHex2 PrintHex4 temp
 
 MetaChar
 
@@ -745,10 +763,10 @@ MetaFunc
 .if ENABLE_HEX
         dw PrintHex4
         dw PrintHex2
-.endif
-.if ENABLE_PTR
+    .if ENABLE_PTR
         dw PrintPtr4
         dw PrintPtr2
+    .endif
 .endif
 .if ENABLE_STR
         dw PrintStrP
