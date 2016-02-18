@@ -1,4 +1,4 @@
-; Version 8
+; Version 9
 
 ; ca65
 .feature c_comments
@@ -43,27 +43,13 @@
     .res bytes
 .endmacro
 
-
-/*
-
-    ;     "X=## Y=## $=####:## %%%%%%%%~%%%%%%%%"
-    APPLE "            SAVE:?? 76543210 "
-    INV                                 "12345678"
-
-
-@ 4-Byte Hex 4 chars
-$ 2-Byte Hex 2 chars
-# 1-Byte Dec 3 chars
-& 4-Byte Ptr 1 char
-* 4-Byte Dec 5 chars
-% 1-Byte Bin 8 chars
-? 1-byte Bin inverse 1, normal 0
-
-*/
-
-
         __MAIN = $4000
-        .include "dos33.inc"
+
+; DOS3.3 meta -- remove these 2 if running under ProDOS
+        .word __MAIN         ; 2 byte BLOAD address
+        .word __END - __MAIN ; 2 byte BLOAD size
+
+        .org  __MAIN         ; .org must come after header else offsets are wrong
 
         HOME = $FC58
         temp = $FE
@@ -92,21 +78,6 @@ ReverseBit
         RTS
 
 TEXT
-    ; TODO: macro to mark up non-literals as high-byte
-    ;.byte  "X=## Y=## $=####:@@ %%%%%%%%~????????"
-    ;APPLE "X="
-    ;.byte   "$$"
-    ;APPLE     " Y="
-    ;.byte        "$$"
-    ;APPLE          " $="
-    ;.byte             "$$$$"
-    ;APPLE                 ":"
-    ;.byte                  "@@"
-    ;APPLE                    " "
-    ;.byte                     "%%%%%%%%"
-    ;APPLE                             "~" 
-    ;.byte                              "????????"
-    ;.byte 0
 
     APPLE "X="
     .byte   "#"
@@ -135,23 +106,51 @@ DATA
     ds 256 - <*
 
 /*
+
+/*
+Problem:
+
+We want to print this ...
+    
+    .byte "X=## Y=### $=####:@@ %%%%%%%%~????????"
+
+... without having to waste marking up literals with an escape character
+
+
 printf() on the 6502
 
 - is bloated by using a meta-character '%' instead of the high bit
-- doesn't provide a standard way to print binary
+- doesn't provide a standard way to print binary *facepalm*
 - doesn't provide a standard way to print a deferenced pointer
+- 2 digit, 3 digit and 5 digit decimals requiring wasting a "width" character
+  e.g. %2d, %3d, %5d
 
-Here is a micro replacement:
+
+Solution:
+
+Here is a micro replacement, printm()
 
 * Literals have the high byte set (APPLE text)
 * Meta characters have the high bit cleared (ASCII)
 
-  $ print 2 byte hex
-  # print 3 char dec
+    x Hex 2 Byte
+    $ Hex 4 Byte
 
-The dummy address $C0DE is to force
-a 16-bit address for the assembler
-  
+    @ Ptr 2 Byte
+    & Ptr 4 Byte
+
+    # Dec 1 Byte (max 2 digits)
+    d Dec 2 Byte (max 3 digits)
+    u Dec 2 Byte (max 5 digits)
+
+    % Bin 1 Byte normal  one's and zeros
+    ? Bin 1 Byte inverse one's, normal zeroes
+
+    s Str - Zero terminated
+    p Str - Pascall
+
+Note: The dummy address $C0DE is to force the assembler
+to generate a 16-bit address instead of optimizing a ZP operand
 
 */
 
@@ -192,7 +191,10 @@ PrintHex2
 _PrintHex
         STA _nHexWidth
         JSR NxtArgXY
-_PrintHexXY
+
+; Print 16-bit Y,X in hex
+; Uses _nHexWidth to limit output width
+_PrintHexYX
         STX _val+0
         STY _val+1
         LDX #0
@@ -270,7 +272,7 @@ _PrintPtr
 ;_JumpPrintHexXY
 ;        TAY
 
-        BRA _PrintHexXY ; always
+        BRA _PrintHexYX ; always
 
 ; ======================================================================
 Print
@@ -317,7 +319,8 @@ PrintDec2
 _PrintDec
         STA _nDecWidth
         JSR NxtArgXY
-PrintDecXY
+
+PrintDecYX
         STX _val+0
         STY _val+1
 
@@ -376,8 +379,8 @@ DecWidth
         JMP PrintReverseBCD
 
 
-; % Bin 1 Byte normal  1
-; d Bin 1 Byte inverse 1
+; % Bin 1 Byte normal  one's and zeros
+; ? Bin 1 Byte inverse one's, normal zeroes
 ; ======================================================================
 PrintBinInv
         LDA #$81
