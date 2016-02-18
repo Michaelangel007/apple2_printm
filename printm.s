@@ -1,4 +1,4 @@
-; Version 0.7
+; Version 8
 
 ; ca65
 .feature c_comments
@@ -66,7 +66,7 @@ $ 2-Byte Hex 2 chars
         .include "dos33.inc"
 
         HOME = $FC58
-        temp = $FF
+        temp = $FE
 
         JSR HOME
 
@@ -162,10 +162,11 @@ a 16-bit address for the assembler
         _pFormat     = GetFormat +1
         _iArg        = NxtArgByte+1
         _pArg        = IncArg    +1
-        _nHexNibbles = HexNibbles+1
+        _nHexWidth   = HexWidth  +1
+        _nDecWidth   = DecWidth  +1
 
 ; printm( format, args, ... )
-;========================================================================
+; ======================================================================
 PrintM
         STX _pArg+0
         STY _pArg+1
@@ -182,14 +183,14 @@ NextArg
 
 ; x Hex 2 Byte
 ; $ Hex 4 Byte
-;========================================================================
+; ======================================================================
 PrintHex4
         LDA #4
         BNE _PrintHex
 PrintHex2
         LDA #2
 _PrintHex
-        STA _nHexNibbles
+        STA _nHexWidth
         JSR NxtArgXY
 _PrintHexXY
         STX _val+0
@@ -218,12 +219,13 @@ _Hex2Asc
         ROR _val+0
 
         INX
-HexNibbles
-        CPX #0          ; _nHexNibbles NOTE: self-modifying!
+HexWidth
+        CPX #0          ; _nHexWidth NOTE: self-modifying!
         BNE _HexDigit
                         ; Intentional fall into reverse BCD
 
-;========================================================================
+; On Entry: X number of chars to print in buffer _bcd
+; ======================================================================
 PrintReverseBCD
         DEX
         BMI NextFormat
@@ -231,29 +233,46 @@ PrintReverseBCD
         JSR PutChar
         BRA PrintReverseBCD
 
+
 ; @ Ptr 2 Byte
 ; & Ptr 4 Byte
-;========================================================================
+; ======================================================================
 PrintPtr4
         LDA #4
         BNE _PrintPtr
 PrintPtr2
         LDA #2
 _PrintPtr
-        STA _nHexNibbles
+        STA _nHexWidth
         JSR NxtArgXY
 
-        STX $01
-        STY $02
+; 13 bytes - zero page version
+        STX temp+0      ; zero-page for (ZP),Y
+        STY temp+1
         LDY #$0
-        LDA ($01),Y
+        LDA (temp),Y
         TAX
         INY
-        LDA ($01),Y
+        LDA (temp),Y
         TAY
+
+; 20 bytes - self modifying code version if zero-page not available
+;        STX PtrVal+1
+;        STY PtrVal+2
+;        LDY #0          ; 0: A->X
+;PrtVal
+;        TAX             ; 1: A->Y
+;        LDA $C0DE, Y
+;        INY
+;        CPY #2
+;        BEQ _JumpPrintHexXY
+;        BNE _PtrVal
+;_JumpPrintHexXY
+;        TAY
+
         BRA _PrintHexXY ; always
 
-;========================================================================
+; ======================================================================
 Print
         JSR PutChar
 
@@ -286,7 +305,7 @@ _Done
 ; # Dec 1 Byte (max 2 digits)
 ; d Dec 2 Byte (max 3 digits)
 ; u Dec 2 Byte (max 5 digits)
-;========================================================================
+; ======================================================================
 PrintDec5
         LDA #5
         BNE _PrintDec   ; always
@@ -296,7 +315,7 @@ PrintDec3
 PrintDec2
         LDA #2          ; 2 digits
 _PrintDec
-        STA DecDigits+1
+        STA _nDecWidth
         JSR NxtArgXY
 PrintDecXY
         STX _val+0
@@ -352,14 +371,14 @@ _BCD2Char
         DEX
         BPL _BCD2Char
 
-DecDigits
-        LDX #0      ; _DecDigits
+DecWidth
+        LDX #0      ; _nDecDigits NOTE: self modifying!
         JMP PrintReverseBCD
 
 
 ; % Bin 1 Byte normal  1
 ; d Bin 1 Byte inverse 1
-;========================================================================
+; ======================================================================
 PrintBinInv
         LDA #$81
         BNE _PrintBin
@@ -367,11 +386,14 @@ PrintBinAsc
         LDA #$01
 _PrintBin
         STA _PrintBit+1
-        JSR NxtArgXY
+        JSR NxtArgXY    ; X = low byte
 
         LDY #8          ; print 8 bits
-        TXA
 _Bit2Asc
+        TXA
+        CMP #$80        ; C= A>=$80
+        ROL             ; C<-76543210<-C
+        TAX
         AND #$01            ; 0 -> B0
         BEQ _FlipBit
 _PrintBit
@@ -379,21 +401,11 @@ _PrintBit
 _FlipBit
         EOR #$B0
         JSR PutChar
-        TXA
-        LSR
-        TAX
         DEY
         BNE _Bit2Asc
 _JumpNextFormat
 ;       BRA NextFormat  ; always
         JMP NextFormat  ; JMP :-(
-
-/*
-        JSR GetWidth
-        JSR NxtArgXY GetArgAddr
-        JSR ToBinX
-        JSR PrintBuf
-*/
 
 ; ___ Utility ___
 
@@ -410,7 +422,7 @@ GetWidth
         LDY #0
 IncWidth
         LDA $C0DE,Y     ; NOTE: self-modifying!
-        STY _nHexNibbles
+        STY _nHexWidth
 CmpMeta
         CMP #$00        ; _CmpMeta NOTE: self-modifying!
         BNE _Done       ; optimization: re-use RTS
@@ -418,20 +430,20 @@ CmpMeta
         BRA IncWidth
 */
 
-;========================================================================
+; ======================================================================
 PutChar
         STA $400        ; NOTE: self-modifying!
         INC PutChar+1   ; inc lo
         RTS
 
-;========================================================================
 ; @return &aArg[ iArg ] -> XY
+; ======================================================================
 GetArgAddr
         LDX _pArg+0  ; Low  Byte
         LDY _pArg+1  ; High Byte
         RTS
 
-;========================================================================
+; ======================================================================
 ; @return _Arg[ _Num ]
 NxtArgByte
         LDY #00         ; _iArg  NOTE: self-modifying!
@@ -443,7 +455,7 @@ IncArg
 @_SamePage
         RTS
 
-;========================================================================
+; ======================================================================
 ; @return X,Y 16-bit arg value
 NxtArgXY
         JSR NxtArgByte
