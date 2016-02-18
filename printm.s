@@ -1,4 +1,4 @@
-; Version 10
+; Version 11
 
 ; ca65
 .feature c_comments
@@ -13,6 +13,16 @@
     .repeat .strlen(text), I
         .byte   .strat(text, I) | $80
     .endrep
+.endmacro
+
+; Force APPLE 'text' with high bit on but last character has high bit off
+; Will display as NORMAL characters (last character will appear FLASHING)
+; Merlin: Macro Assembler -- Dextral Character Inverted
+.macro DCI text
+    .repeat .strlen(text)-1, I
+        .byte   .strat(text, I) | $80
+    .endrep
+    .byte   .strat(text, .strlen(text)-1) & $7F
 .endmacro
 
 ; Force ASCII 'text' to be control chars: $00..$1F
@@ -31,6 +41,11 @@
     .endrep
 .endmacro
 
+.macro PASCAL text
+    .byte .strlen(text)
+    APPLE text
+.endmacro
+
 .macro db val
     .byte val
 .endmacro
@@ -43,44 +58,117 @@
     .res bytes
 .endmacro
 
-        __MAIN = $4000
+        HOME    = $FC58
+        TABV    = $FB5B
 
+; printm pointer for PrintPtr2, PrintPtr4, PrintStrA, PrintStrC, PrintStrP
+        _temp   = $FE
+
+        __MAIN = $4000
 ; DOS3.3 meta -- remove these 2 if running under ProDOS
         .word __MAIN         ; 2 byte BLOAD address
         .word __END - __MAIN ; 2 byte BLOAD size
 
+/*
+
+Output:
+
+X=39 Y=191 $=2345:D5 11010101~10101011
+
+Byte=-128 -001 000 001 127
+
+Strings: 'HELLO','WORLD'
+
+Apple: 'HOME' Pascal: 'String Len 13'
+
+*/
+
         .org  __MAIN         ; .org must come after header else offsets are wrong
-
-        HOME = $FC58
-        temp = $FE
-
+; Demo printm
         JSR HOME
 
         LDA #$D5
-        STA $2345
-        STA DATA + $0C
-        JSR ReverseByte
-        STA DATA + $0E
 
+        LDX #$45
+        LDY #$23
+        STX DATA+6
+        STY DATA+7
+        STX DATA+8
+        STY DATA+9
+
+        STX _HgrAddr+1
+        STY _HgrAddr+2
+_HgrAddr
+        STA $C0DE
+
+        STA DATA+10
+        JSR ReverseByte
+        STA DATA+12
+
+        LDY #0
+        JSR VTABY
         LDX #<DATA  ; Low  Byte of Address
         LDY #>DATA  ; High Byte of Address
         JSR PrintM
 
+        LDY #2
+        JSR VTABY
         LDX #<DATA2
         LDY #>DATA2
         JSR PrintM
 
-        RTS
+        LDY #4
+        JSR VTABY
+        LDX #<DATA3
+        LDY #>DATA3
+        JSR PrintM
+
+        LDY #6
+        JSR VTABY
+        LDX #<DATA4
+        LDY #>DATA4
+        JSR PrintM
+
+        LDA #8
+        JMP TABV
 
 ReverseByte
         LDX #8
-        STA temp
+        STA $FF     ; temp working byte
 ReverseBit
-        ASL temp
+        ASL $FF     ; temp working byte
         ROR
         DEX
         BNE ReverseBit
         RTS
+
+VTABY
+        LDA SCREEN_LO,Y
+        STA PutChar+1
+        LDA SCREEN_HI,Y
+        ORA #$04    ; TXT page 1
+        STA PutChar+2
+        RTS
+
+; Y Lookup Table for 40x24 Text Screen
+SCREEN_LO
+        .byte $00, $80, $00, $80
+        .byte $00, $80, $00, $80
+
+        .byte $28, $A8, $28, $A8
+        .byte $28, $A8, $28, $A8
+
+        .byte $50, $D0, $50, $D0
+        .byte $50, $D0, $50, $D0
+SCREEN_HI
+        .byte $00, $00, $01, $01
+        .byte $02, $02, $03, $03
+
+        .byte $00, $00, $01, $01
+        .byte $02, $02, $03, $03
+
+        .byte $00, $00, $01, $01
+        .byte $02, $02, $03, $03
 
 TEXT
     ;byte "X=## Y=ddd $=xxxx:@@ %%%%%%%%~????????"
@@ -99,14 +187,13 @@ TEXT
     .byte 0
 
 DATA
-    dw $0400    ; aArg[-1] Screen Dst
     dw TEXT     ; aArg[ 0] text
     dw 39       ; aArg[ 1] x
     dw 191      ; aArg[ 2] y
-    dw $2345    ; aArg[ 3] addr
-    dw $2345    ; aArg[ 4] byte
-    dw $DA1A    ; aArg[ 5] bits
-    dw $DA1A    ; aArg[ 6] bits
+    dw $C0DE    ; aArg[ 3] addr  ScreenAddr
+    dw $C0DE    ; aArg[ 4] byte  ScreenAddr pointer
+    dw $DA1A    ; aArg[ 5] bits  ScreenByte
+    dw $DA1A    ; aArg[ 6] bits  ScreenByte reversed
 
 TEXT2
     ;byte "Byte=b b b b Str=s,s"
@@ -118,39 +205,66 @@ TEXT2
     .byte          "b"
     APPLE           " "
     .byte            "b"
-    APPLE             " Str="
-    .byte                  "s"
-    APPLE                   ","
-    .byte                    "s"
+    APPLE             " "
+    .byte              "b"
     db 0
 
 TEXT_HELLO
-    APPLE "HELLO "
+    APPLE "HELLO"
     db 0
 
 TEXT_WORLD
-    APPLE "HELLO "
+    APPLE "WORLD"
     db 0
-    
+
 DATA2
-    dw $0500    ; Screen Dst 
     dw TEXT2
     dw $80      ; -128
     dw $FF      ; -1
     dw $00      ;  0
+    dw $01      ; +1
     dw $7F      ; +127
+
+TEXT3
+    APPLE "Strings: '"
+    .byte           "s"
+    APPLE            "','"
+    .byte               "s"
+    APPLE                "'"
+    db 0
+
+DATA3
+    dw TEXT3
     dw TEXT_HELLO
     dw TEXT_WORLD
+
+TEXT_DCI
+    DCI "HOME"
+
+TEXT_PASCAL
+    PASCAL "String Len 13"
+
+TEXT4
+    APPLE "Apple: '"
+    .byte         "a"
+    APPLE          "'  Pascal: '"
+    .byte                      "p"
+    APPLE                       "'"
+    db 0
+
+DATA4
+    dw TEXT4
+    dw TEXT_DCI
+    dw TEXT_PASCAL
 
 ; Pad until end of page so PrintM starts on new page
     ds 256 - <*
 
-
-
 /*
+
 Problem:
 We want to print this ...
-    
+
     .byte "X=## Y=### $=####:@@ %%%%%%%%~????????"
 
 ... without having to waste marking up literals with an escape character
@@ -164,7 +278,6 @@ printf() on the 6502
 - 2 digit, 3 digit and 5 digit decimals requiring wasting a "width" character
   e.g. %2d, %3d, %5d
 
-
 Solution:
 
 Here is a micro replacement, printm()
@@ -175,8 +288,8 @@ Here is a micro replacement, printm()
     x Hex 2 Byte
     $ Hex 4 Byte
 
-    @ Ptr 2 Byte
-    & Ptr 4 Byte
+    @ Ptr 2 Byte at pointer
+    & Ptr 4 Byte at pointer
 
     # Dec 1 Byte (max 2 digits)
     d Dec 2 Byte (max 3 digits)
@@ -185,13 +298,22 @@ Here is a micro replacement, printm()
     % Bin 1 Byte normal  one's and zeros
     ? Bin 1 Byte inverse one's, normal zeroes
 
-    s Str - Zero terminated
-    p Str - Pascall
+    a Str - APPLE text (high bit set), last char is ASCII
+    s Str - C string, zero terminated
+    p Str - Pascal string, first character is string length
 
 Note: The dummy address $C0DE is to force the assembler
 to generate a 16-bit address instead of optimizing a ZP operand
 
+To toggle features on / off
 */
+
+ENABLE_BIN   = 1
+ENABLE_DEC   = 1
+ENABLE_BYTE  = 1
+ENABLE_HEX   = 1
+ENABLE_PTR   = 1
+ENABLE_STR   = 1
 
 
 ; Self-Modifying variable aliases
@@ -210,9 +332,6 @@ PrintM
         STY _pArg+1
         STZ _iArg    
 
-        JSR NxtArgYX
-        STX _pScreen+0  ; lo
-        STY _pScreen+1  ; hi
 NextArg
         JSR NxtArgYX
         STX _pFormat+0  ; lo
@@ -233,9 +352,10 @@ _PrintHex
 
 ; Print 16-bit Y,X in hex
 ; Uses _nHexWidth to limit output width
-_PrintHexYX
-        STX _val+0
-        STY _val+1
+PrintHexYX
+        STX _val+0      ; may be tempting to move this to NxtArgYX
+        STY _val+1      ; as XYtoVal but others call us
+
         LDX #0
 _HexDigit
         LDA _val+0
@@ -285,16 +405,17 @@ PrintPtr2
         LDA #2
 _PrintPtr
         STA _nHexWidth
-        JSR NxtArgYX
+        JSR NxtArgToTemp
 
+;       JSR NxtArgYX
 ; 13 bytes - zero page version
-        STX temp+0      ; zero-page for (ZP),Y
-        STY temp+1
+;       STX _temp+0     ; zero-page for (ZP),Y
+;       STY _temp+1
         LDY #$0
-        LDA (temp),Y
+        LDA (_temp),Y
         TAX
         INY
-        LDA (temp),Y
+        LDA (_temp),Y
         TAY
 
 ; 20 bytes - self modifying code version if zero-page not available
@@ -311,7 +432,7 @@ _PrintPtr
 ;_JumpPrintHexXY
 ;        TAY
 
-        BRA _PrintHexYX ; always
+        BRA PrintHexYX  ; needs XYtoVal setup
 
 ; ======================================================================
 Print
@@ -360,8 +481,8 @@ _PrintDec
         JSR NxtArgYX
 
 PrintDecYX
-        STX _val+0
-        STY _val+1
+        STX _val+0      ; may be tempting to move this to NxtArgYX
+        STY _val+1      ; as XYtoVal but others call us
 
         STZ _bcd+0
         STZ _bcd+1
@@ -418,6 +539,8 @@ DecWidth
         JMP PrintReverseBCD
 
 
+.if ENABLE_BIN
+
 ; % Bin 1 Byte normal  one's and zeros
 ; ? Bin 1 Byte inverse one's, normal zeroes
 ; ======================================================================
@@ -448,12 +571,12 @@ _FlipBit
 _JumpNextFormat
 ;       BRA NextFormat  ; always
         JMP NextFormat  ; JMP :-(
+.endif  ; ENABLE_BIN
 
 
+; b Print a signed byte in decimal
 ; ======================================================================
 PrintByte
-; JMP PrintHex4   ; DEBUG
-
         JSR NxtArgYX    ; X = low byte
         TXA
         BPL PrintBytePos
@@ -470,51 +593,65 @@ PrintBytePos
         LDY #00         ; 00XX
         LDA #3          ; 3 digits max
         STA _nDecWidth
-        JMP PrintDecYX
+        JMP PrintDecYX  ; needs XYtoVal setup
 
+.if ENABLE_STR
+
+; a String (APPLE text, last byte ASCII)
+; See: DCI
+; ======================================================================
+PrintStrA
+        JSR NxtArgToTemp
+
+        LDY #$0
+_PrintStrA
+        LDA (_temp),Y
+        BPL @_LastChar
+        JSR PutChar
+        INY
+        BNE _PrintStrA
+        INC _temp+1
+        BRA _PrintStrA
+@_LastChar
+        LDX #1
+        ORA #$80
+        BRA _PrintCharA
+
+; s String (C,ASCIIZ)
+; ======================================================================
+PrintStrC
+        JSR NxtArgToTemp
+
+        LDY #$0
+@_NextByte
+        LDA (_temp),Y
+        BEQ _JumpNextFormat
+        JSR PutChar
+        INY
+        BNE @_NextByte
+        INC _temp+1
+        BRA @_NextByte
+
+; p String (Pascal)
 ; ======================================================================
 PrintStrP
 ; JMP PrintHex4   ; DEBUG
-
-        JSR NxtArgYX    ; X = low byte
-        STX temp+0      ; zero-page for (ZP),Y
-        STY temp+1
+        JSR NxtArgToTemp
 
         LDY #$0
-        LDA (temp),Y
+        LDA (_temp),Y
+        BEQ _JumpNextFormat
         TAX
 _PrintStrP
         INY
-        LDA (temp),Y
+        LDA (_temp),Y
+_PrintCharA
         JSR PutChar
         DEX
         BNE _PrintStrP
         BEQ _JumpNextFormat ; always
 
-; ======================================================================
-PrintStrC
-JMP PrintHex4   ; DEBUG
-
-        JSR NxtArgYX    ; X = low byte
-        STX temp+0      ; zero-page for (ZP),Y
-        DEY
-        STY temp+1
-
-; We could use BIT $ABS to skip next INC temp+1 instruction
-; but since we need to waste a byte anyways
-; we use a DEY instead
-;        .byte $2C       ; BIT $abs -- skip next instruction
-@_NextPage
-        INC temp+1
-
-        LDY #$0
-@_NextByte
-        LDA (temp),Y
-        BEQ _JumpNextFormat
-        JSR PutChar
-        INC temp+0
-        BNE @_NextByte
-        BEQ @_NextPage
+.endif ; ENABLE_STR
 
 ; __________ Utility __________
 
@@ -526,6 +663,7 @@ PutChar
 
 ; ======================================================================
 ; @return next arg as 16-bit arg value in Y,X
+NxtArgToTemp
 NxtArgYX
         JSR NxtArgByte
         TAX
@@ -539,43 +677,84 @@ IncArg
         BNE @_SamePage
         INC _pArg+1     ;
 @_SamePage
-
         TAY
+
+; Callers of NxtToArgYX don't use _temp
+_NxtArgToTemp
+        STX _temp+0     ; zero-page for (ZP),Y
+        STY _temp+1
+
+;XYtoVal
+;        STX _val+0      ; may be tempting to move this to NxtArgYX
+;        STY _val+1      ;
+
         RTS
+
+; 
+; ======================================================================
 
                 ; Hex2/Hex4 temp
 _bcd    ds  6   ; 6 chars for printing dec
 _val    dw  0
 
 MetaChar
-        db '&'  ; PrintPtr4
-        db '@'  ; PrintPtr2
-        db '?'  ; PrintBinInv
+
+.if ENABLE_BIN
+        db '?'  ; PrintBinInv   NOTE: 1's printed in inverse
         db '%'  ; PrintBinAsc
-        db 'b'  ; PrintByte      NOTE: Signed -128 .. +127
-        db 'p'  ; PrintStrP      NOTE: Pascal string; C printf 'p' is pointer!
-        db 's'  ; PrintStrC      NOTE: C string, zero terminated
+.endif
+.if ENABLE_DEC
+    .if ENABLE_BYTE
+        db 'b'  ; PrintByte     NOTE: Signed -128 .. +127
+    .endif
         db 'u'  ; PrintDec5
         db 'd'  ; PrintDec3
         db '#'  ; PrintDec2
-        db '$'  ; PrintHex2
+.endif
+.if ENABLE_HEX
         db 'x'  ; PrintHex4
+        db '$'  ; PrintHex2
+.endif
+.if ENABLE_PTR
+        db '&'  ; PrintPtr4
+        db '@'  ; PrintPtr2
+.endif
+.if ENABLE_STR
+        db 'p'  ; PrintStrP     NOTE: Pascal string; C printf 'p' is pointer!
+        db 's'  ; PrintStrC     NOTE: C string, zero terminated
+        db 'a'  ; PrintStrA     NOTE: Last byte is ASCII
+.endif
 
 _MetaCharEnd
 NumMeta = _MetaCharEnd - MetaChar
 
 MetaFunc
-        dw PrintPtr4
-        dw PrintPtr2
+
+.if ENABLE_BIN
         dw PrintBinInv
         dw PrintBinAsc
+.endif
+.if ENABLE_DEC
+    .if ENABLE_BYTE
         dw PrintByte
-        dw PrintStrP
-        dw PrintStrC
+    .endif
         dw PrintDec5
         dw PrintDec3
         dw PrintDec2
-        dw PrintHex2
+.endif
+.if ENABLE_HEX
         dw PrintHex4
+        dw PrintHex2
+.endif
+.if ENABLE_PTR
+        dw PrintPtr4
+        dw PrintPtr2
+.endif
+.if ENABLE_STR
+        dw PrintStrP
+        dw PrintStrC
+        dw PrintStrA
+.endif
+
 __END
 
