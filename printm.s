@@ -1,19 +1,35 @@
 ; ca65
 .feature c_comments
 
-/* Version 14
+/* Version 15
 printm - a printf replacement for 65C02
-Michael Pohroeski
+Michael Pohoreski
 
 
 Problem:
-Ideally we want to print a single line that includes literal and variables.
+
+Ideally we want to print a single line that includes literal and variables
+in MIXED ASCII case -- high bit characters would be output "as is"
+and ASCII characters would be interpreted as a variable output.
+
+While originally this gives us a nice 1:1 mapping for input:output ...
 
     .byte "X=## Y=### $=####:@@ %%%%%%%%~????????"
 
-without having to waste marking up literals with an escape character
+... it has 2 problems:
 
-Why printf() on the 6502 sucks:
+a) it has to be constructed in pieces
+b) and it is bloated.
+
+Is there we can use a more compact printf-style format string
+where we don't waste storing the escape character, and
+toggle the high bit on characters on/off as needed?
+
+Yes, if we use a macro!
+
+     PRINTM "X=%# Y=%d $=%x:%@ %%~%?"
+
+Thisis why printf() on the 6502 sucks:
 
 - is bloated by using a meta-character '%' instead of the high bit
 - doesn't provide a standard way to print binary *facepalm*
@@ -50,7 +66,7 @@ Here is a micro replacement, printm()
 Note: The dummy address $C0DE is to force the assembler
 to generate a 16-bit address instead of optimizing a ZP operand
 
-Takes up 473 bytes
+The printm with everything enabled takes up 472 bytes
 
 Demo + Library text dump:
 
@@ -67,8 +83,8 @@ Demo + Library text dump:
 4050:A2 2E A0 41 20 00 42 A9
 4058:08 4C 5B FB A2 08 85 FF
 4060:06 FF 6A CA D0 FA 60 B9
-4068:76 40 8D 8D 43 B9 8E 40
-4070:09 04 8D 8E 43 60 00 80
+4068:76 40 8D 8C 43 B9 8E 40
+4070:09 04 8D 8D 43 60 00 80
 4078:00 80 00 80 00 80 28 A8
 4080:28 A8 28 A8 28 A8 50 D0
 4088:50 D0 50 D0 50 D0 00 00
@@ -118,67 +134,65 @@ Demo + Library text dump:
 41E8:00 00 00 00 00 00 00 00
 41F0:00 00 00 00 00 00 00 00
 41F8:00 00 00 00 00 00 00 00
-4200:8E 9A 43 8C 9B 43 9C 98
-4208:43 20 93 43 8E 83 42 8C
+4200:8E 99 43 8C 9A 43 9C 97
+4208:43 20 92 43 8E 83 42 8C
 4210:84 42 80 6E A9 04 D0 02
-4218:A9 02 8D 52 42 20 93 43
-4220:8E B0 43 8C B1 43 A2 00
-4228:AD B0 43 29 0F C9 0A 90
-4230:02 69 06 69 B0 9D AA 43
-4238:4E B1 43 6E B0 43 4E B1
-4240:43 6E B0 43 4E B1 43 6E
-4248:B0 43 4E B1 43 6E B0 43
+4218:A9 02 8D 52 42 20 92 43
+4220:8E AF 43 8C B0 43 A2 00
+4228:AD AF 43 29 0F C9 0A 90
+4230:02 69 06 69 B0 9D A9 43
+4238:4E B0 43 6E AF 43 4E B0
+4240:43 6E AF 43 4E B0 43 6E
+4248:AF 43 4E B0 43 6E AF 43
 4250:E8 E0 00 D0 D3 CA 30 22
-4258:BD AA 43 20 8C 43 80 F5
+4258:BD A9 43 20 8B 43 80 F5
 4260:A9 04 D0 02 A9 02 8D 52
-4268:42 20 93 43 A0 00 B1 FE
+4268:42 20 92 43 A0 00 B1 FE
 4270:AA C8 B1 FE A8 80 A9 20
-4278:8C 43 EE 83 42 D0 03 EE
+4278:8B 43 EE 83 42 D0 03 EE
 4280:84 42 AD DE C0 F0 14 30
-4288:EE A2 0C DD B2 43 F0 05
+4288:EE A2 0C DD B1 43 F0 05
 4290:CA 10 F8 30 E5 8A 0A AA
-4298:7C BF 43 60 A9 05 D0 06
+4298:7C BE 43 60 A9 05 D0 06
 42A0:A9 03 D0 02 A9 02 8D 05
-42A8:43 20 93 43 8E B0 43 8C
-42B0:B1 43 9C AA 43 9C AB 43
-42B8:9C AC 43 A2 10 F8 0E B0
-42C0:43 2E B1 43 AD AA 43 6D
-42C8:AA 43 8D AA 43 AD AB 43
-42D0:6D AB 43 8D AB 43 AD AC
-42D8:43 6D AC 43 8D AC 43 CA
+42A8:43 20 92 43 8E AF 43 8C
+42B0:B0 43 9C A9 43 9C AA 43
+42B8:9C AB 43 A2 10 F8 0E AF
+42C0:43 2E B0 43 AD A9 43 6D
+42C8:A9 43 8D A9 43 AD AA 43
+42D0:6D AA 43 8D AA 43 AD AB
+42D8:43 6D AB 43 8D AB 43 CA
 42E0:D0 DC D8 A2 02 A0 05 BD
-42E8:AA 43 4A 4A 4A 4A 18 69
-42F0:B0 99 AA 43 88 BD AA 43
-42F8:29 0F 18 69 B0 99 AA 43
+42E8:A9 43 4A 4A 4A 4A 18 69
+42F0:B0 99 A9 43 88 BD A9 43
+42F8:29 0F 18 69 B0 99 A9 43
 4300:88 CA 10 E3 A2 00 4C 55
 4308:42 A9 81 D0 02 A9 01 8D
-4310:21 43 20 93 43 A0 08 8A
+4310:21 43 20 92 43 A0 08 8A
 4318:C9 80 2A AA 29 01 F0 02
-4320:A9 81 49 B0 20 8C 43 88
-4328:D0 ED 4C 7A 42 20 93 43
-4330:8A 10 0D A9 AD 20 8C 43
+4320:A9 81 49 B0 20 8B 43 88
+4328:D0 ED 4C 7A 42 20 92 43
+4330:8A 10 0D A9 AD 20 8B 43
 4338:8A 49 FF 29 7F 18 69 01
 4340:AA A0 00 A9 03 8D 05 43
-4348:4C AC 42 20 93 43 A0 00
-4350:B1 FE 10 0A 20 8C 43 C8
-4358:D0 F6 E6 FF 80 F2 A2 01
-4360:09 80 80 20 20 93 43 A0
-4368:00 B1 FE F0 BD 20 8C 43
-4370:C8 D0 F6 E6 FF 80 F2 20
-4378:93 43 A0 00 B1 FE F0 AA
-4380:AA C8 B1 FE 20 8C 43 CA
-4388:D0 F7 F0 9E 8D DE C0 EE
-4390:8D 43 60 20 97 43 AA A0
-4398:00 B9 DE C0 EE 98 43 D0
-43A0:03 EE 9B 43 A8 86 FE 84
-43A8:FF 60 00 00 00 00 00 00
-43B0:00 00 3F 25 62 75 64 23
-43B8:78 24 26 40 70 73 61 09
-43C0:43 0D 43 2D 43 9C 42 A0
-43C8:42 A4 42 14 42 18 42 60
-43D0:42 64 42 77 43 64 43 4B
-43D8:43
-
+4348:4C AC 42 20 92 43 A0 00
+4350:B1 FE 10 0A 20 8B 43 C8
+4358:D0 F6 E6 FF 80 F2 09 80
+4360:4C 77 42 20 92 43 A0 00
+4368:B1 FE F0 BE 20 8B 43 C8
+4370:D0 F6 E6 FF 80 F2 20 92
+4378:43 A0 00 B1 FE F0 AB AA
+4380:C8 B1 FE 20 8B 43 CA D0
+4388:F7 F0 9F 8D DE C0 EE 8C
+4390:43 60 20 96 43 AA A0 00
+4398:B9 DE C0 EE 97 43 D0 03
+43A0:EE 9A 43 A8 86 FE 84 FF
+43A8:60 00 00 00 00 00 00 00
+43B0:00 3F 25 62 75 64 23 78
+43B8:24 26 40 70 73 61 09 43
+43C0:0D 43 2D 43 9C 42 A0 42
+43C8:A4 42 14 42 18 42 60 42
+43D0:64 42 76 43 63 43 4B 43
 
 To toggle features on / off:
 
@@ -191,11 +205,35 @@ ENABLE_HEX   = 1
 ENABLE_PTR   = 1    ; requires ENABLE_HEX
 ENABLE_STR   = 1
 
-
+; more ca65
 .feature labels_without_colons
 .feature leading_dot_in_identifiers
 ; 65C02
 .PC02
+
+; This will take a printf-style string and compact it
+; % is the escape character to output the next byte in ASCII (high bit clear)
+; othersise the remaining chars will default to have their high bit set
+.macro PRINTM text
+    .local h
+    h .set $80
+
+    .repeat .strlen(text), I
+        .if (.strat(text , I) = '%')
+            ; handle special case of last char was %
+            .if( h = $00 )
+                .byte .strat(text, I) | h
+                h .set $80
+            .else
+                h .set $00
+            .endif
+        .else
+            .byte .strat(text, I) | h
+            h .set $80
+        .endif
+    .endrep
+    .byte 0
+.endmacro
 
 ; Force APPLE 'text' to have high bit on
 ; Will display as NORMAL characters
@@ -368,19 +406,7 @@ SCREEN_HI
 
 TEXT
     ;byte "X=## Y=ddd $=xxxx:@@ %%%%%%%%~????????"
-    APPLE "X="
-    .byte   "#"
-    APPLE    " Y="
-    .byte       "d"
-    APPLE        " $="
-    .byte           "x"
-    APPLE            ":"
-    .byte             "@"
-    APPLE              " "
-    .byte               "%"
-    APPLE                "~"
-    .byte                 "?"
-    .byte 0
+    PRINTM "X=%# Y=%d $=%x:%@ %%~%?"
 
 DATA
     dw TEXT     ; aArg[ 0] text
@@ -392,18 +418,7 @@ DATA
     dw $DA1A    ; aArg[ 6] bits  ScreenByte reversed
 
 TEXT2
-    ;byte "Byte=b b b b Str=s,s"
-    APPLE "Byte="
-    .byte      "b"
-    APPLE       " "
-    .byte        "b"
-    APPLE         " "
-    .byte          "b"
-    APPLE           " "
-    .byte            "b"
-    APPLE             " "
-    .byte              "b"
-    db 0
+    PRINTM "Byte=%b %b %b %b %b"
 
 TEXT_HELLO
     APPLE "HELLO"
@@ -422,12 +437,7 @@ DATA2
     dw $7F      ; +127
 
 TEXT3
-    APPLE "Strings: '"
-    .byte           "s"
-    APPLE            "','"
-    .byte               "s"
-    APPLE                "'"
-    db 0
+    PRINTM "Strings: '%s','%s'"
 
 DATA3
     dw TEXT3
@@ -441,12 +451,7 @@ TEXT_PASCAL
     PASCAL "String Len 13"
 
 TEXT4
-    APPLE "Apple: '"
-    .byte         "a"
-    APPLE          "'  Pascal: '"
-    .byte                      "p"
-    APPLE                       "'"
-    db 0
+    PRINTM "Apple: '%a'  Pascal: '%p'"
 
 DATA4
     dw TEXT4
@@ -589,15 +594,13 @@ _PrintPtr
 ; ======================================================================
 Print
         JSR PutChar
-
-; Adjust pointer to next char in format
-NextFormat
+NextFormat              ; Adjust pointer to next char in format
         INC _pFormat+0
         BNE GetFormat
         INC _pFormat+1
 GetFormat
         LDA $C0DE       ; _pFormat NOTE: self-modifying!
-        BEQ _Done
+        BEQ _Done       ; zero-terminated
         BMI Print       ; neg = literal
 ; NOTE: If all features are turned off, will get a ca65 Range Error
         LDX #NumMeta-1  ; pos = meta
@@ -771,9 +774,13 @@ _PrintStrA
         INC _temp+1
         BRA _PrintStrA
 @_LastChar
-        LDX #1
+; 6 byte:
+;        LDX #1
+;        ORA #$80
+;        BRA _PrintCharA
+; 5 byte:
         ORA #$80
-        BRA _PrintCharA
+        JMP Print
 
 ; s String (C,ASCIIZ)
 ; ======================================================================
