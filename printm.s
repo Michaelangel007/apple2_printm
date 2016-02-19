@@ -1,7 +1,7 @@
 ; ca65
 .feature c_comments
 
-/* Version 16
+/* Version 17
 printm - a printf replacement for 65C02
 Michael Pohoreski
 
@@ -404,7 +404,7 @@ Output:
 
 X=39 Y=191 $=2345:D5 11010101~10101011
 Bin ASC: 01010111 <- ???
-Bin REV: 01010111
+Bin REV: 01010111 <- FIXME: Bin INV, Bin REV
 Dec2: 99
 Dec3: 999
 Dec5: 65385
@@ -419,7 +419,7 @@ Pascal: 'Pascal Len 13'
 
 */
 
-        .org  __MAIN         ; .org must come after header else offsets are wrong
+        .org  __MAIN        ; .org must come after header else offsets are wrong
 
 ; Demo printm
         JSR HOME
@@ -429,37 +429,39 @@ Pascal: 'Pascal Len 13'
         LDA #$AA
         STA $2001
 
-        LDA DATA+4  ; HGR Y row
-        LDX #$00    ; HGR x.col_lo = 0
-        LDY #$00    ;     x.col_hi = 0
+        LDA ARGS_DEMO+4     ;HGR Y row
+        LDX #$00            ; HGR x.col_lo = 0
+        LDY #$00            ;     x.col_hi = 0
         JSR HPOSN
         CLC
         LDA GBASL
-        ADC DATA+2  ; HGR x col
+        ADC ARGS_DEMO+2     ; HGR x col
         STA GBASL
         TAX
         LDY GBASH
 
-        STX DATA+6  ; aArg[3]
-        STY DATA+7
-        STX DATA+8  ; aArg[4]
-        STY DATA+9
+        STX ARGS_DEMO+6     ; aArg[3]
+        STY ARGS_DEMO+7
+        STX ARGS_DEMO+8     ; aArg[4]
+        STY ARGS_DEMO+9
 
         LDA $2000
         LDY #0
         STA (GBASL),Y
-        STA DATA+10 ; aArg[5]
-        STZ DATA+11
+        STA ARGS_DEMO+10    ; aArg[5]
+        STZ ARGS_DEMO+11
+        STA ARGS_BIN_ASC+2
 
         JSR ReverseByte
-        STA DATA+12 ; aArg[6]
-        STZ DATA+13
+        STA ARGS_DEMO+12    ; aArg[6]
+        STZ ARGS_DEMO+13
+        STA ARGS_BIN_INV+2
 
 .if ENABLE_BIN && ENABLE_DEC && ENABLE_HEX
         LDY #0
         JSR VTABY
-        LDX #<DATA  ; Low  Byte of Address
-        LDY #>DATA  ; High Byte of Address
+        LDX #<ARGS_DEMO     ; Low  Byte of Address
+        LDY #>ARGS_DEMO     ; High Byte of Address
         JSR PrintM
 .endif
 
@@ -571,7 +573,7 @@ Pascal: 'Pascal Len 13'
         LDA #14
         JSR TABV
 
-; old-skool text printing
+; old-skool text/hex printing
         LDY #0
 @_Text
         LDA PRINTM_TEXT,Y
@@ -582,7 +584,7 @@ Pascal: 'Pascal Len 13'
 @_Size
 
         LDA PRINTM_SIZE+1
-        JSR PREQHEX
+        JSR PRBYTE
         LDA PRINTM_SIZE+0
         JSR PRBYTE
         LDA #$8D
@@ -631,12 +633,12 @@ SCREEN_HI
 
 ; ______________________________________________________________________
 
-TEXT
+TEXT_DEMO
     ;byte "X=## Y=ddd $=xxxx:@@ %%%%%%%%~????????"
     PRINTM "X=%# Y=%d $=%x:%@ %%~%?", 0
 
-DATA
-    dw TEXT     ; aArg[ 0] text
+ARGS_DEMO
+    dw TEXT_DEMO; aArg[ 0] text
     dw 39       ; aArg[ 1] x
     dw 191      ; aArg[ 2] y
     dw $C0DE    ; aArg[ 3] addr  ScreenAddr
@@ -651,11 +653,11 @@ TEXT_BIN_INV    PRINTM "Bin INV: %?", 0
 
 ARGS_BIN_ASC
     dw TEXT_BIN_ASC
-    dw DATA+10
+    dw $DA1A
 
 ARGS_BIN_INV
     dw TEXT_BIN_INV
-    dw DATA+10
+    dw $DA1A
 
 ; ______________________________________________________________________
 
@@ -679,17 +681,17 @@ ARGS_DEC_5
 ARGS_DEC_BYTE
     dw TEXT_DEC_BYTE
     dw $80      ; -128
-    dw $FF      ; -1
-    dw $00      ;  0
-    dw $01      ; +1
+    dw $FF      ; -001
+    dw $00      ;  000
+    dw $01      ; +001
     dw $7F      ; +127
 
 ; ______________________________________________________________________
 
-TEXT_HEX_2  PRINTM "Hex2: $%$", 0
-TEXT_HEX_4  PRINTM "Hex4: $%x", 0
-TEXT_PTR_2  PRINTM "Ptr2: $%x:%@", 0
-TEXT_PTR_4  PRINTM "Ptr4: $%x:%&", 0
+TEXT_HEX_2  PRINTM "Hex2: %$", 0
+TEXT_HEX_4  PRINTM "Hex4: %x", 0
+TEXT_PTR_2  PRINTM "Ptr2: %x:%@", 0
+TEXT_PTR_4  PRINTM "Ptr4: %x:%&", 0
 
 ARGS_HEX_2
     dw TEXT_HEX_2
@@ -749,7 +751,7 @@ ARGS_STR_PASCAL
 
 ; ______________________________________________________________________
 
-PRINTM_TEXT APPLE "printm().size"
+PRINTM_TEXT APPLE "printm().size = $"
             db 0
 PRINTM_SIZE
             dw __END - PrintM
@@ -914,7 +916,7 @@ PrintReverseBCD
 ; Main loop of printm() ... print literal chars
 ; ======================================================================
 ForceAPPLE
-        ORA #$80        
+        ORA #$80
 Print
         JSR PutChar
 NextFormat              ; Adjust pointer to next char in format
@@ -926,10 +928,12 @@ GetFormat
         BEQ _Done       ; zero-terminated
         BMI Print       ; neg = literal
 
-; NOTE: If all features are turned off would get a ca65 Range Error
-; We can't use this equation since it is not const
-; due to _MetaCharEnd not being defined yet 
-;     NumMeta = _MetaCharEnd - MetaChar
+; NOTE: If all features are turned off LDX #-1 ca65 throws Range Error
+;             NumMeta = _MetaCharEnd - MetaChar
+;        LDX #NumMeta-1  ; pos = meta
+; We can't use this equation since it is not const due to the assembler
+; not having defined _MetaCharEnd yet
+; Instead we count the number of features enabled
 .if (NumMeta > 0)
         LDX #NumMeta-1  ; pos = meta
 .else
@@ -1218,13 +1222,13 @@ MetaChar
     .if USE_HEX_4
         db 'x'  ; PrintHex4
     .endif
-    .if USE_HEX_4
+    .if USE_HEX_2
         db '$'  ; PrintHex2
     .endif
-    .if USE_PTR_2
+    .if USE_PTR_4
         db '&'  ; PrintPtr4
     .endif
-    .if USE_PTR_4
+    .if USE_PTR_2
         db '@'  ; PrintPtr2
     .endif
 .endif
