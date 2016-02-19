@@ -1,7 +1,7 @@
 ; ca65
 .feature c_comments
 
-/* Version 15
+/* Version 16
 printm - a printf replacement for 65C02
 Michael Pohoreski
 
@@ -12,28 +12,38 @@ Ideally we want to print a single line that includes literal and variables
 in MIXED ASCII case -- high bit characters would be output "as is"
 and ASCII characters would be interpreted as a variable output.
 
-While originally this gives us a nice 1:1 mapping for input:output ...
+             __   ___   ____ __ ________ ________
+    .byte "X=## Y=### $=$$$$:@@ %%%%%%%%~????????"
 
-    .byte "X=## Y=### $=####:@@ %%%%%%%%~????????"
+Legend:
+
+    # Print Dec Num
+    $ Print Hex Num
+    % Print Bin Num
+    ? Print Bin Num but with 1's in inverse
+    @ Print Ptr Val
+    _ Chars with underscore represents ASCII characters
+
+While originally this gives us a nice 1:1 mapping for input:output ...
 
 ... it has 2 problems:
 
 a) it has to be constructed in pieces
 b) and it is bloated.
 
-Is there we can use a more compact printf-style format string
-where we don't waste storing the escape character, and
+Can we use a more compact printf-style format string
+where we don't waste storing the escape character AND
 toggle the high bit on characters on/off as needed?
 
 Yes, if we use a macro!
 
      PRINTM "X=%# Y=%d $=%x:%@ %%~%?"
 
-Thisis why printf() on the 6502 sucks:
+This is why printf() on the 6502 sucks:
 
 - is bloated by using a meta-character '%' instead of the high bit
 - doesn't provide a standard way to print binary *facepalm*
-- doesn't provide a standard way to print a deferenced pointer
+- doesn't provide a standard way to print a dereferenced pointer
 - 2 digit, 3 digit and 5 digit decimals requiring wasting "width" characters
   e.g. %2d, %3d, %5d
   When a single character would work instead.
@@ -45,8 +55,8 @@ Here is a micro replacement, printm()
 * Literals have the high byte set (APPLE text)
 * Meta characters have the high bit cleared (ASCII)
 
-    x Hex - print 2 Byte
-    $ Hex - print 4 Byte
+    $ Hex - print 2 Byte
+    x Hex - print 4 Byte
 
     @ Ptr - print hex byte at 16-bit pointer
     & Ptr - print hex word at 16-bit pointer
@@ -54,167 +64,249 @@ Here is a micro replacement, printm()
     # Dec - Print 1 Byte in decimal (max 2 digits)
     d Dec - Print 2 Byte in decimal (max 3 digits)
     u Dec - Print 2 Byte in decimal (max 5 digits)
-    b Dec - Print signed byte
+    b Dec - Print signed byte in decimal
 
-    % Bin 1 Byte
-    ? Bin 1 Byte but 1's are printed in inverse
+    % Bin - Print 8 bits
+    ? Bin - Print 8 bits but 1's in inverse
 
     a Str - APPLE text (high bit set), last char is ASCII
     s Str - C string, zero terminated
     p Str - Pascal string, first character is string length
 
-Note: The dummy address $C0DE is to force the assembler
-to generate a 16-bit address instead of optimizing a ZP operand
+Each option can invidivually be enabled / disabled
+to control the memory footprint.
 
-The printm with everything enabled takes up 472 bytes
+With everything enabled printm() takes up $1D1 = 465 bytes
+(Plus 2 bytes in zero page.)
 
-Demo + Library text dump:
+With all features turned off the core routines use $64 = 100 bytes.
 
-4000:20 58 FC A9 D5 A2 45 A0
-4008:23 8E BE 40 8C BF 40 8E
-4010:C0 40 8C C1 40 8E 1C 40
-4018:8C 1D 40 8D DE C0 8D C2
-4020:40 20 5C 40 8D C4 40 A0
-4028:00 20 67 40 A2 B8 A0 40
-4030:20 00 42 A0 02 20 67 40
-4038:A2 E1 A0 40 20 00 42 A0
-4040:04 20 67 40 A2 FE A0 40
-4048:20 00 42 A0 06 20 67 40
-4050:A2 2E A0 41 20 00 42 A9
-4058:08 4C 5B FB A2 08 85 FF
-4060:06 FF 6A CA D0 FA 60 B9
-4068:76 40 8D 8C 43 B9 8E 40
-4070:09 04 8D 8D 43 60 00 80
-4078:00 80 00 80 00 80 28 A8
-4080:28 A8 28 A8 28 A8 50 D0
-4088:50 D0 50 D0 50 D0 00 00
-4090:01 01 02 02 03 03 00 00
-4098:01 01 02 02 03 03 00 00
-40A0:01 01 02 02 03 03 D8 BD
-40A8:23 A0 D9 BD 64 A0 A4 BD
-40B0:78 BA 40 A0 25 FE 3F 00
-40B8:A6 40 27 00 BF 00 DE C0
-40C0:DE C0 1A DA 1A DA C2 F9
-40C8:F4 E5 BD 62 A0 62 A0 62
-40D0:A0 62 A0 62 00 C8 C5 CC
-40D8:CC CF 00 D7 CF D2 CC C4
-40E0:00 C6 40 80 00 FF 00 00
-40E8:00 01 00 7F 00 D3 F4 F2
-40F0:E9 EE E7 F3 BA A0 A7 73
-40F8:A7 AC A7 73 A7 00 ED 40
-4100:D5 40 DB 40 C8 CF CD 45
-4108:0D D3 F4 F2 E9 EE E7 A0
-4110:CC E5 EE A0 B1 B3 C1 F0
-4118:F0 EC E5 BA A0 A7 61 A7
-4120:A0 A0 D0 E1 F3 E3 E1 EC
-4128:BA A0 A7 70 A7 00 16 41
-4130:04 41 08 41 00 00 00 00
-4138:00 00 00 00 00 00 00 00
-4140:00 00 00 00 00 00 00 00
-4148:00 00 00 00 00 00 00 00
-4150:00 00 00 00 00 00 00 00
-4158:00 00 00 00 00 00 00 00
-4160:00 00 00 00 00 00 00 00
-4168:00 00 00 00 00 00 00 00
-4170:00 00 00 00 00 00 00 00
-4178:00 00 00 00 00 00 00 00
-4180:00 00 00 00 00 00 00 00
-4188:00 00 00 00 00 00 00 00
-4190:00 00 00 00 00 00 00 00
-4198:00 00 00 00 00 00 00 00
-41A0:00 00 00 00 00 00 00 00
-41A8:00 00 00 00 00 00 00 00
-41B0:00 00 00 00 00 00 00 00
-41B8:00 00 00 00 00 00 00 00
-41C0:00 00 00 00 00 00 00 00
-41C8:00 00 00 00 00 00 00 00
-41D0:00 00 00 00 00 00 00 00
-41D8:00 00 00 00 00 00 00 00
-41E0:00 00 00 00 00 00 00 00
-41E8:00 00 00 00 00 00 00 00
-41F0:00 00 00 00 00 00 00 00
-41F8:00 00 00 00 00 00 00 00
-4200:8E 99 43 8C 9A 43 9C 97
-4208:43 20 92 43 8E 83 42 8C
-4210:84 42 80 6E A9 04 D0 02
-4218:A9 02 8D 52 42 20 92 43
-4220:8E AF 43 8C B0 43 A2 00
-4228:AD AF 43 29 0F C9 0A 90
-4230:02 69 06 69 B0 9D A9 43
-4238:4E B0 43 6E AF 43 4E B0
-4240:43 6E AF 43 4E B0 43 6E
-4248:AF 43 4E B0 43 6E AF 43
-4250:E8 E0 00 D0 D3 CA 30 22
-4258:BD A9 43 20 8B 43 80 F5
-4260:A9 04 D0 02 A9 02 8D 52
-4268:42 20 92 43 A0 00 B1 FE
-4270:AA C8 B1 FE A8 80 A9 20
-4278:8B 43 EE 83 42 D0 03 EE
-4280:84 42 AD DE C0 F0 14 30
-4288:EE A2 0C DD B1 43 F0 05
-4290:CA 10 F8 30 E5 8A 0A AA
-4298:7C BE 43 60 A9 05 D0 06
-42A0:A9 03 D0 02 A9 02 8D 05
-42A8:43 20 92 43 8E AF 43 8C
-42B0:B0 43 9C A9 43 9C AA 43
-42B8:9C AB 43 A2 10 F8 0E AF
-42C0:43 2E B0 43 AD A9 43 6D
-42C8:A9 43 8D A9 43 AD AA 43
-42D0:6D AA 43 8D AA 43 AD AB
-42D8:43 6D AB 43 8D AB 43 CA
-42E0:D0 DC D8 A2 02 A0 05 BD
-42E8:A9 43 4A 4A 4A 4A 18 69
-42F0:B0 99 A9 43 88 BD A9 43
-42F8:29 0F 18 69 B0 99 A9 43
-4300:88 CA 10 E3 A2 00 4C 55
-4308:42 A9 81 D0 02 A9 01 8D
-4310:21 43 20 92 43 A0 08 8A
-4318:C9 80 2A AA 29 01 F0 02
-4320:A9 81 49 B0 20 8B 43 88
-4328:D0 ED 4C 7A 42 20 92 43
-4330:8A 10 0D A9 AD 20 8B 43
-4338:8A 49 FF 29 7F 18 69 01
-4340:AA A0 00 A9 03 8D 05 43
-4348:4C AC 42 20 92 43 A0 00
-4350:B1 FE 10 0A 20 8B 43 C8
-4358:D0 F6 E6 FF 80 F2 09 80
-4360:4C 77 42 20 92 43 A0 00
-4368:B1 FE F0 BE 20 8B 43 C8
-4370:D0 F6 E6 FF 80 F2 20 92
-4378:43 A0 00 B1 FE F0 AB AA
-4380:C8 B1 FE 20 8B 43 CA D0
-4388:F7 F0 9F 8D DE C0 EE 8C
-4390:43 60 20 96 43 AA A0 00
-4398:B9 DE C0 EE 97 43 D0 03
-43A0:EE 9A 43 A8 86 FE 84 FF
-43A8:60 00 00 00 00 00 00 00
-43B0:00 3F 25 62 75 64 23 78
-43B8:24 26 40 70 73 61 09 43
-43C0:0D 43 2D 43 9C 42 A0 42
-43C8:A4 42 14 42 18 42 60 42
-43D0:64 42 76 43 63 43 4B 43
+With Bin, Dec2, Dec5, Hex2, Hex4, and StrA
+the size is $154 = 340 bytes
 
-To toggle features on / off:
+To toggle features on / off, change USE_*:
 
 */
 
-ENABLE_BIN   = 1
-ENABLE_DEC   = 1
-ENABLE_BYTE  = 1    ; requires ENABLE_DEC
-ENABLE_HEX   = 1
-ENABLE_PTR   = 1    ; requires ENABLE_HEX
-ENABLE_STR   = 1
+; NOTE: The Size *also* includes the core routines
+;       so the actual implementation size for each feature
+;       is actually smaller the size leads you to believe.
+;
+;           Feature  Size Total Notes
+USE_BIN_ASC     = 1 ; $81 \
+USE_BIN_INV     = 1 ; $87 / $8B
+USE_DEC_2       = 1 ; $D7 \
+USE_DEC_3       = 1 ; $D9  $106
+USE_DEC_5       = 1 ; $D9
+USE_DEC_BYTE    = 1 ; $F3 /     sets ENABLE_DEC
+USE_HEX_2       = 1 ; $AE \
+USE_HEX_4       = 1 ; $AE / $B2
+USE_PTR_2       = 1 ; $C0       sets ENABLE_HEX
+USE_PTR_4       = 1 ; $C3       sets ENABLE_HEX
+USE_STR_A       = 1 ; $7A \
+USE_STR_C       = 1 ; $7A   $A8
+USE_STR_PASCAL  = 1 ; $7C /
+
+/*
+
+Demo + Library text dump:
+
+4000:20 58 FC A9 D5 8D 00 20
+4008:A9 AA 8D 01 20 AD 6F 41
+4010:A2 00 A0 00 20 11 F4 18
+4018:A5 26 6D 6D 41 85 26 AA
+4020:A4 27 8E 71 41 8C 72 41
+4028:8E 73 41 8C 74 41 AD 00
+4030:20 A0 00 91 26 8D 75 41
+4038:9C 76 41 20 0F 41 8D 77
+4040:41 9C 78 41 A0 00 20 1A
+4048:41 A2 6B A0 41 20 04 43
+4050:A0 01 20 1A 41 A2 8F A0
+4058:41 20 04 43 A0 02 20 1A
+4060:41 A2 93 A0 41 20 04 43
+4068:A0 03 20 1A 41 A2 BE A0
+4070:41 20 04 43 A0 04 20 1A
+4078:41 A2 C2 A0 41 20 04 43
+4080:A0 05 20 1A 41 A2 C6 A0
+4088:41 20 04 43 A0 06 20 1A
+4090:41 A2 CA A0 41 20 04 43
+4098:A0 07 20 1A 41 A2 FE A0
+40A0:41 20 04 43 A0 08 20 1A
+40A8:41 A2 02 A0 42 20 04 43
+40B0:A0 09 20 1A 41 A2 06 A0
+40B8:42 20 04 43 A0 0A 20 1A
+40C0:41 A2 0C A0 42 20 04 43
+40C8:A0 0B 20 1A 41 A2 58 A0
+40D0:42 20 04 43 A0 0C 20 1A
+40D8:41 A2 5E A0 42 20 04 43
+40E0:A0 0D 20 1A 41 A2 62 A0
+40E8:42 20 04 43 A9 0E 20 5B
+40F0:FB A0 00 B9 66 42 F0 06
+40F8:20 ED FD C8 D0 F5 AD 75
+4100:42 20 D3 FD AD 74 42 20
+4108:DA FD A9 8D 4C ED FD A2
+4110:08 85 FF 06 FF 6A CA D0
+4118:FA 60 B9 29 41 8D 89 44
+4120:B9 41 41 09 04 8D 8A 44
+4128:60 00 80 00 80 00 80 00
+4130:80 28 A8 28 A8 28 A8 28
+4138:A8 50 D0 50 D0 50 D0 50
+4140:D0 00 00 01 01 02 02 03
+4148:03 00 00 01 01 02 02 03
+4150:03 00 00 01 01 02 02 03
+4158:03 D8 BD 23 A0 D9 BD 64
+4160:A0 A4 BD 78 BA 40 A0 25
+4168:FE 3F 00 59 41 27 00 BF
+4170:00 DE C0 DE C0 1A DA 1A
+4178:DA C2 E9 EE A0 C1 D3 C3
+4180:BA A0 25 00 C2 E9 EE A0
+4188:C9 CE D6 BA A0 3F 00 79
+4190:41 75 41 84 41 75 41 C4
+4198:E5 E3 B2 BA A0 23 00 C4
+41A0:E5 E3 B3 BA A0 64 00 C4
+41A8:E5 E3 B5 BA A0 75 00 C2
+41B0:F9 F4 E5 BD 62 A0 62 A0
+41B8:62 A0 62 A0 62 00 97 41
+41C0:63 00 9F 41 E7 03 A7 41
+41C8:69 FF AF 41 80 00 FF 00
+41D0:00 00 01 00 7F 00 C8 E5
+41D8:F8 B2 BA A0 A4 24 00 C8
+41E0:E5 F8 B4 BA A0 A4 78 00
+41E8:D0 F4 F2 B2 BA A0 A4 78
+41F0:BA 40 00 D0 F4 F2 B4 BA
+41F8:A0 A4 78 BA 26 00 D6 41
+4200:34 12 DF 41 34 12 E8 41
+4208:00 20 00 20 F3 41 00 20
+4210:00 20 C8 C5 CC CC CF 00
+4218:D7 CF D2 CC C4 00 C8 CF
+4220:CD 45 0D D0 E1 F3 E3 E1
+4228:EC A0 CC E5 EE A0 B1 B3
+4230:C3 A0 A0 A0 A0 A0 BA A0
+4238:A7 73 A7 AC A7 73 A7 00
+4240:C1 F0 F0 EC E5 A0 BA A0
+4248:A7 61 A7 00 D0 E1 F3 E3
+4250:E1 EC BA A0 A7 70 A7 00
+4258:30 42 12 42 18 42 40 42
+4260:1E 42 4C 42 22 42 F0 F2
+4268:E9 EE F4 ED A8 A9 AE F3
+4270:E9 FA E5 00 D1 01 00 00
+4278:00 00 00 00 00 00 00 00
+4280:00 00 00 00 00 00 00 00
+4288:00 00 00 00 00 00 00 00
+4290:00 00 00 00 00 00 00 00
+4298:00 00 00 00 00 00 00 00
+42A0:00 00 00 00 00 00 00 00
+42A8:00 00 00 00 00 00 00 00
+42B0:00 00 00 00 00 00 00 00
+42B8:00 00 00 00 00 00 00 00
+42C0:00 00 00 00 00 00 00 00
+42C8:00 00 00 00 00 00 00 00
+42D0:00 00 00 00 00 00 00 00
+42D8:00 00 00 00 00 00 00 00
+42E0:00 00 00 00 00 00 00 00
+42E8:00 00 00 00 00 00 00 00
+42F0:00 00 00 00 00 00 00 00
+42F8:00 00 00 00 00 00 00 00
+4300:A9 04 D0 16 8E 96 44 8C
+4308:97 44 9C 94 44 20 8F 44
+4310:8E 98 43 8C 99 43 80 7F
+4318:A9 02 8D 52 43 20 8F 44
+4320:8E AC 44 8C AD 44 A2 00
+4328:AD AC 44 29 0F C9 0A 90
+4330:02 69 06 69 B0 9D A6 44
+4338:4E AD 44 6E AC 44 4E AD
+4340:44 6E AC 44 4E AD 44 6E
+4348:AC 44 4E AD 44 6E AC 44
+4350:E8 E0 04 D0 D3 CA 30 37
+4358:BD A6 44 20 88 44 80 F5
+4360:A9 04 D0 02 A9 02 8D 52
+4368:43 20 8F 44 A0 00 B1 FE
+4370:AA C8 B1 FE A8 80 A9 20
+4378:8F 44 A0 00 B1 FE 10 0A
+4380:20 88 44 C8 D0 F6 E6 FF
+4388:80 F2 09 80 20 88 44 EE
+4390:98 43 D0 03 EE 99 43 AD
+4398:DE C0 F0 14 30 EE A2 0C
+43A0:DD AE 44 F0 05 CA 10 F8
+43A8:30 E5 8A 0A AA 7C BB 44
+43B0:60 A9 05 D0 06 A9 03 D0
+43B8:02 A9 02 8D 1A 44 20 8F
+43C0:44 8E AC 44 8C AD 44 9C
+43C8:A6 44 9C A7 44 9C A8 44
+43D0:A2 10 F8 0E AC 44 2E AD
+43D8:44 AD A6 44 6D A6 44 8D
+43E0:A6 44 AD A7 44 6D A7 44
+43E8:8D A7 44 AD A8 44 6D A8
+43F0:44 8D A8 44 CA D0 DC D8
+43F8:A2 02 A0 05 BD A6 44 4A
+4400:4A 4A 4A 18 69 B0 99 A6
+4408:44 88 BD A6 44 29 0F 18
+4410:69 B0 99 A6 44 88 CA 10
+4418:E3 A2 00 4C 55 43 A9 81
+4420:D0 02 A9 01 8D 36 44 20
+4428:8F 44 A0 08 8A C9 80 2A
+4430:AA 29 01 F0 02 A9 81 49
+4438:B0 20 88 44 88 D0 ED 4C
+4440:8F 43 20 8F 44 8A 10 0D
+4448:A9 AD 20 88 44 8A 49 FF
+4450:29 7F 18 69 01 AA A0 00
+4458:A9 03 8D 1A 44 4C C1 43
+4460:20 8F 44 A0 00 B1 FE F0
+4468:D6 20 88 44 C8 D0 F6 E6
+4470:FF 80 F2 20 8F 44 A0 00
+4478:B1 FE F0 C3 AA C8 B1 FE
+4480:20 88 44 CA D0 F7 F0 B7
+4488:8D DE C0 EE 89 44 60 20
+4490:93 44 AA A0 00 B9 DE C0
+4498:EE 94 44 D0 03 EE 97 44
+44A0:A8 86 FE 84 FF 60 00 00
+44A8:00 00 00 00 00 00 3F 25
+44B0:62 75 64 23 78 24 26 40
+44B8:70 73 61 1E 44 22 44 42
+44C0:44 B1 43 B5 43 B9 43 00
+44C8:43 18 43 60 43 64 43 73
+44D0:44 60 44 77 43
+
+*/
+
+
+; Include necessary components based on features requested
+ENABLE_BIN      = USE_BIN_ASC || USE_BIN_INV
+ENABLE_DEC      = USE_DEC_2   || USE_DEC_3 || USE_DEC_5 || USE_DEC_BYTE
+ENABLE_HEX      = USE_HEX_2   || USE_HEX_4 || USE_PTR_2 || USE_PTR_4
+ENABLE_PTR      = USE_PTR_2   || USE_PTR_4
+ENABLE_STR      = USE_STR_A   || USE_STR_C || USE_STR_PASCAL
 
 ; more ca65
+.linecont +
+NumMeta         = 0 + \
+    USE_BIN_ASC     + \
+    USE_BIN_INV     + \
+    USE_DEC_2       + \
+    USE_DEC_3       + \
+    USE_DEC_5       + \
+    USE_DEC_BYTE    + \
+    USE_HEX_2       + \
+    USE_HEX_4       + \
+    USE_PTR_2       + \
+    USE_PTR_4       + \
+    USE_STR_A       + \
+    USE_STR_C       + \
+    USE_STR_PASCAL
+;.out .sprintf( "Commands: %d", NumMeta )
+.linecont -
+
 .feature labels_without_colons
 .feature leading_dot_in_identifiers
 ; 65C02
 .PC02
 
-; This will take a printf-style string and compact it
-; % is the escape character to output the next byte in ASCII (high bit clear)
-; othersise the remaining chars will default to have their high bit set
-.macro PRINTM text
+; This will take a printf-style string and compact it. The '%' is the escape
+; character to output the next byte in ASCII (high bit clear) and print a var.
+; Otherwise the remaining chars will default to literals having their high bit
+; set. To output a literal '%' you will need to manually add it
+; as the %% outputs confusingly enough is a single ASCII '%' which is print binary
+.macro PRINTM text, endbyte ; text2, text3, text4, text5, text6
     .local h
     h .set $80
 
@@ -222,7 +314,7 @@ ENABLE_STR   = 1
         .if (.strat(text , I) = '%')
             ; handle special case of last char was %
             .if( h = $00 )
-                .byte .strat(text, I) | h
+                .byte .strat(text, I) ; ASCII % = PrintBin
                 h .set $80
             .else
                 h .set $00
@@ -232,7 +324,10 @@ ENABLE_STR   = 1
             h .set $80
         .endif
     .endrep
-    .byte 0
+
+    .ifnblank endbyte
+        .byte endbyte
+    .endif
 .endmacro
 
 ; Force APPLE 'text' to have high bit on
@@ -286,8 +381,14 @@ ENABLE_STR   = 1
     .res bytes
 .endmacro
 
+        GBASL   = $26
+        GBASH   = $27
+        HPOSN   = $F411 ; A= Y, X=lo,Y=hi, sets GBASL, GBASH
         HOME    = $FC58
         TABV    = $FB5B
+        COUT    = $FDED
+        PREQHEX = $FDD3 ; print '=', then A in hex
+        PRBYTE  = $FDDA
 
 ; printm pointer for PrintPtr2, PrintPtr4, PrintStrA, PrintStrC, PrintStrP
         _temp   = $FE
@@ -302,38 +403,59 @@ ENABLE_STR   = 1
 Output:
 
 X=39 Y=191 $=2345:D5 11010101~10101011
-
+Bin ASC: 01010111 <- ???
+Bin REV: 01010111
+Dec2: 99
+Dec3: 999
+Dec5: 65385
 Byte=-128 -001 000 001 127
-
-Strings: 'HELLO','WORLD'
-
-Apple: 'HOME' Pascal: 'String Len 13'
+Hex2: $34
+Hex4: $1234
+Ptr2: $2000:D5
+Ptr4: $2000:AAD5
+C     : 'HELLO','WORLD'
+Apple : 'HOME'
+Pascal: 'Pascal Len 13'
 
 */
 
         .org  __MAIN         ; .org must come after header else offsets are wrong
+
 ; Demo printm
         JSR HOME
 
         LDA #$D5
+        STA $2000
+        LDA #$AA
+        STA $2001
 
-        LDX #$45
-        LDY #$23
-        STX DATA+6
+        LDA DATA+4  ; HGR Y row
+        LDX #$00    ; HGR x.col_lo = 0
+        LDY #$00    ;     x.col_hi = 0
+        JSR HPOSN
+        CLC
+        LDA GBASL
+        ADC DATA+2  ; HGR x col
+        STA GBASL
+        TAX
+        LDY GBASH
+
+        STX DATA+6  ; aArg[3]
         STY DATA+7
-        STX DATA+8
+        STX DATA+8  ; aArg[4]
         STY DATA+9
 
-        STX _HgrAddr+1
-        STY _HgrAddr+2
-_HgrAddr
-        STA $C0DE
+        LDA $2000
+        LDY #0
+        STA (GBASL),Y
+        STA DATA+10 ; aArg[5]
+        STZ DATA+11
 
-        STA DATA+10
         JSR ReverseByte
-        STA DATA+12
+        STA DATA+12 ; aArg[6]
+        STZ DATA+13
 
-.if ENABLE_BIN || ENABLE_DEC || ENABLE_HEX
+.if ENABLE_BIN && ENABLE_DEC && ENABLE_HEX
         LDY #0
         JSR VTABY
         LDX #<DATA  ; Low  Byte of Address
@@ -341,30 +463,130 @@ _HgrAddr
         JSR PrintM
 .endif
 
-.if ENABLE_BYTE
+.if ENABLE_BIN
+    .if USE_BIN_ASC
+        LDY #1
+        JSR VTABY
+        LDX #<ARGS_BIN_ASC
+        LDY #>ARGS_BIN_ASC
+        JSR PrintM
+    .endif
+    .if USE_BIN_INV
         LDY #2
         JSR VTABY
-        LDX #<DATA2
-        LDY #>DATA2
+        LDX #<ARGS_BIN_INV
+        LDY #>ARGS_BIN_INV
         JSR PrintM
-.endif  ; ENABLE_BYTE
+    .endif
+.endif
 
-.if ENABLE_STR
+.if ENABLE_DEC
+    .if USE_DEC_2
+        LDY #3
+        JSR VTABY
+        LDX #<ARGS_DEC_2
+        LDY #>ARGS_DEC_2
+        JSR PrintM
+    .endif
+    .if USE_DEC_3
         LDY #4
         JSR VTABY
-        LDX #<DATA3
-        LDY #>DATA3
+        LDX #<ARGS_DEC_3
+        LDY #>ARGS_DEC_3
         JSR PrintM
-
+    .endif
+    .if USE_DEC_5
+        LDY #5
+        JSR VTABY
+        LDX #<ARGS_DEC_5
+        LDY #>ARGS_DEC_5
+        JSR PrintM
+    .endif
+    .if USE_DEC_BYTE
         LDY #6
         JSR VTABY
-        LDX #<DATA4
-        LDY #>DATA4
+        LDX #<ARGS_DEC_BYTE
+        LDY #>ARGS_DEC_BYTE
         JSR PrintM
+    .endif  ; USE_DEC_BYTE
+.endif
+
+.if ENABLE_HEX
+    .if USE_HEX_2
+        LDY #7
+        JSR VTABY
+        LDX #<ARGS_HEX_2
+        LDY #>ARGS_HEX_2
+        JSR PrintM
+    .endif
+    .if USE_HEX_4
+        LDY #8
+        JSR VTABY
+        LDX #<ARGS_HEX_4
+        LDY #>ARGS_HEX_4
+        JSR PrintM
+    .endif
+    .if USE_PTR_2
+        LDY #9
+        JSR VTABY
+        LDX #<ARGS_PTR_2
+        LDY #>ARGS_PTR_2
+        JSR PrintM
+    .endif
+    .if USE_PTR_4
+        LDY #10
+        JSR VTABY
+        LDX #<ARGS_PTR_4
+        LDY #>ARGS_PTR_4
+        JSR PrintM
+    .endif
+.endif
+
+.if ENABLE_STR
+    .if USE_STR_C
+        LDY #11
+        JSR VTABY
+        LDX #<ARGS_STR_C
+        LDY #>ARGS_STR_C
+        JSR PrintM
+    .endif
+
+    .if USE_STR_A
+        LDY #12
+        JSR VTABY
+        LDX #<ARGS_STR_A
+        LDY #>ARGS_STR_A
+        JSR PrintM
+    .endif
+
+    .if USE_STR_PASCAL
+        LDY #13
+        JSR VTABY
+        LDX #<ARGS_STR_PASCAL
+        LDY #>ARGS_STR_PASCAL
+        JSR PrintM
+    .endif
 .endif  ; ENABLE_STR
 
-        LDA #8
-        JMP TABV
+        LDA #14
+        JSR TABV
+
+; old-skool text printing
+        LDY #0
+@_Text
+        LDA PRINTM_TEXT,Y
+        BEQ @_Size
+        JSR COUT
+        INY
+        BNE @_Text
+@_Size
+
+        LDA PRINTM_SIZE+1
+        JSR PREQHEX
+        LDA PRINTM_SIZE+0
+        JSR PRBYTE
+        LDA #$8D
+        JMP COUT
 
 ReverseByte
         LDX #8
@@ -383,6 +605,9 @@ VTABY
         ORA #$04    ; TXT page 1
         STA PutChar+2
         RTS
+
+; Pad until end of page so data starts on new page
+;    ds 256 - <*
 
 ; Y Lookup Table for 40x24 Text Screen
 SCREEN_LO
@@ -404,9 +629,11 @@ SCREEN_HI
         .byte $00, $00, $01, $01
         .byte $02, $02, $03, $03
 
+; ______________________________________________________________________
+
 TEXT
     ;byte "X=## Y=ddd $=xxxx:@@ %%%%%%%%~????????"
-    PRINTM "X=%# Y=%d $=%x:%@ %%~%?"
+    PRINTM "X=%# Y=%d $=%x:%@ %%~%?", 0
 
 DATA
     dw TEXT     ; aArg[ 0] text
@@ -417,8 +644,72 @@ DATA
     dw $DA1A    ; aArg[ 5] bits  ScreenByte
     dw $DA1A    ; aArg[ 6] bits  ScreenByte reversed
 
-TEXT2
-    PRINTM "Byte=%b %b %b %b %b"
+; ______________________________________________________________________
+
+TEXT_BIN_ASC    PRINTM "Bin ASC: %%", 0
+TEXT_BIN_INV    PRINTM "Bin INV: %?", 0
+
+ARGS_BIN_ASC
+    dw TEXT_BIN_ASC
+    dw DATA+10
+
+ARGS_BIN_INV
+    dw TEXT_BIN_INV
+    dw DATA+10
+
+; ______________________________________________________________________
+
+TEXT_DEC_2      PRINTM "Dec2: %#", 0
+TEXT_DEC_3      PRINTM "Dec3: %d", 0
+TEXT_DEC_5      PRINTM "Dec5: %u", 0
+TEXT_DEC_BYTE   PRINTM "Byte=%b %b %b %b %b", 0
+
+ARGS_DEC_2
+    dw TEXT_DEC_2
+    dw 99       ;
+
+ARGS_DEC_3
+    dw TEXT_DEC_3
+    dw 999      ;
+
+ARGS_DEC_5
+    dw TEXT_DEC_5
+    dw $FF69    ; $FF69 = 65385
+
+ARGS_DEC_BYTE
+    dw TEXT_DEC_BYTE
+    dw $80      ; -128
+    dw $FF      ; -1
+    dw $00      ;  0
+    dw $01      ; +1
+    dw $7F      ; +127
+
+; ______________________________________________________________________
+
+TEXT_HEX_2  PRINTM "Hex2: $%$", 0
+TEXT_HEX_4  PRINTM "Hex4: $%x", 0
+TEXT_PTR_2  PRINTM "Ptr2: $%x:%@", 0
+TEXT_PTR_4  PRINTM "Ptr4: $%x:%&", 0
+
+ARGS_HEX_2
+    dw TEXT_HEX_2
+    dw $1234
+
+ARGS_HEX_4
+    dw TEXT_HEX_4
+    dw $1234
+
+ARGS_PTR_2
+    dw TEXT_PTR_2
+    dw $2000
+    dw $2000
+
+ARGS_PTR_4
+    dw TEXT_PTR_4
+    dw $2000
+    dw $2000
+
+; ______________________________________________________________________
 
 TEXT_HELLO
     APPLE "HELLO"
@@ -428,35 +719,41 @@ TEXT_WORLD
     APPLE "WORLD"
     db 0
 
-DATA2
-    dw TEXT2
-    dw $80      ; -128
-    dw $FF      ; -1
-    dw $00      ;  0
-    dw $01      ; +1
-    dw $7F      ; +127
-
-TEXT3
-    PRINTM "Strings: '%s','%s'"
-
-DATA3
-    dw TEXT3
-    dw TEXT_HELLO
-    dw TEXT_WORLD
-
 TEXT_DCI
     DCI "HOME"
 
 TEXT_PASCAL
-    PASCAL "String Len 13"
+    PASCAL "Pascal Len 13"
 
-TEXT4
-    PRINTM "Apple: '%a'  Pascal: '%p'"
 
-DATA4
-    dw TEXT4
+TEXT_STR_C
+    PRINTM "C     : '%s','%s'", 0
+TEXT_STR_A
+    PRINTM "Apple : '%a'", 0
+TEXT_STR_PASCAL
+    PRINTM "Pascal: '%p'", 0
+
+ARGS_STR_C
+    dw TEXT_STR_C
+    dw TEXT_HELLO
+    dw TEXT_WORLD
+
+
+ARGS_STR_A
+    dw TEXT_STR_A
     dw TEXT_DCI
+
+ARGS_STR_PASCAL
+    dw TEXT_STR_PASCAL
     dw TEXT_PASCAL
+
+; ______________________________________________________________________
+
+PRINTM_TEXT APPLE "printm().size"
+            db 0
+PRINTM_SIZE
+            dw __END - PrintM
+
 
 ; Pad until end of page so PrintM starts on new page
     ds 256 - <*
@@ -468,13 +765,23 @@ DATA4
         _pFormat     = GetFormat +1
         _iArg        = NxtArgByte+1
         _pArg        = IncArg    +1
-.if ENABLE_HEX
-        _nHexWidth   = HexWidth  +1
-.endif
 .if ENABLE_DEC
         _nDecWidth   = DecWidth  +1
 .endif ; ENABLE_DEC
+.if ENABLE_HEX
+        _nHexWidth   = HexWidth  +1
 
+    .if USE_HEX_4
+        PrintHex4:
+                LDA #4
+                BNE _PrintHex
+    .endif
+.endif
+
+
+; Note: The dummy address $C0DE is to force the assembler
+; to generate a 16-bit address instead of optimizing a ZP operand
+;
 ; ======================================================================
 ; printm( format, args, ... )
 ; ======================================================================
@@ -491,53 +798,55 @@ NextArg
 
 .if ENABLE_HEX
 
-; x Hex 2 Byte
-; $ Hex 4 Byte
+; $ Hex 2 Byte
+; x Hex 4 Byte
 ; ======================================================================
-PrintHex4
-        LDA #4
-        BNE _PrintHex
-PrintHex2
-        LDA #2
-_PrintHex
-        STA _nHexWidth
-        JSR NxtArgYX
+    .if USE_HEX_2
+        PrintHex2:
+                LDA #2
+    .endif
 
-; Print 16-bit Y,X in hex
-; Uses _nHexWidth to limit output width
-PrintHexYX
-        STX _val+0      ; may be tempting to move this to NxtArgYX
-        STY _val+1      ; as XYtoVal but others call us
+        _PrintHex:
+                STA _nHexWidth
+                JSR NxtArgYX
 
-        LDX #0
-_HexDigit
-        LDA _val+0
-        AND #$F
-        CMP #$A         ; n < 10 ?
-        BCC _Hex2Asc
-        ADC #6          ; n += 6    $A -> +6 + (C=1) = $11
-_Hex2Asc
-        ADC #'0' + $80  ; inverse=remove #$80
-        STA _bcd, X     ; NOTE: Digits are reversed!
+        ; Print 16-bit Y,X in hex
+        ; Uses _nHexWidth to limit output width
+        PrintHexYX:
+                STX _val+0      ; may be tempting to move this to NxtArgYX
+                STY _val+1      ; as XYtoVal but others call us
 
-        LSR _val+1      ; 16-bit SHR nibble
-        ROR _val+0
+                LDX #0
+        _HexDigit:
+                LDA _val+0
+                AND #$F
+                CMP #$A         ; n < 10 ?
+                BCC _Hex2Asc
+                ADC #6          ; n += 6    $A -> +6 + (C=1) = $11
+        _Hex2Asc:
+                ADC #'0' + $80  ; inverse=remove #$80
+                STA _bcd, X     ; NOTE: Digits are reversed!
 
-        LSR _val+1
-        ROR _val+0
+                LSR _val+1      ; 16-bit SHR nibble
+                ROR _val+0
 
-        LSR _val+1
-        ROR _val+0
+                LSR _val+1
+                ROR _val+0
 
-        LSR _val+1
-        ROR _val+0
+                LSR _val+1
+                ROR _val+0
 
-        INX
-HexWidth
-        CPX #0          ; _nHexWidth NOTE: self-modifying!
-        BNE _HexDigit
-                        ; Intentional fall into reverse BCD
+                LSR _val+1
+                ROR _val+0
 
+                INX
+        HexWidth:
+                CPX #4          ; _nHexWidth NOTE: self-modifying!
+                BNE _HexDigit
+                                ; Intentional fall into reverse BCD
+.endif
+
+.if ENABLE_HEX || ENABLE_DEC
 ; On Entry: X number of chars to print in buffer _bcd
 ; ======================================================================
 PrintReverseBCD
@@ -547,51 +856,65 @@ PrintReverseBCD
         JSR PutChar
         BRA PrintReverseBCD
 
+.endif
 
-    .if ENABLE_PTR
+.if ENABLE_HEX
 ; @ Ptr 2 Byte
 ; & Ptr 4 Byte
 ; ======================================================================
-PrintPtr4
-        LDA #4
-        BNE _PrintPtr
-PrintPtr2
-        LDA #2
-_PrintPtr
-        STA _nHexWidth
-        JSR NxtArgToTemp
+    .if USE_PTR_4
+        PrintPtr4:
+                LDA #4
+                BNE _PrintPtr
+    .endif
 
-;       JSR NxtArgYX
-; 13 bytes: zero page version
-;       STX _temp+0     ; zero-page for (ZP),Y
-;       STY _temp+1
-        LDY #$0
-        LDA (_temp),Y
-        TAX
-        INY
-        LDA (_temp),Y
-        TAY
+    .if USE_PTR_2
+        PrintPtr2:
+                LDA #2
+    .endif
 
-; 20 bytes: self-modifying code version if zero-page not available
-;        STX PtrVal+1
-;        STY PtrVal+2
-;        LDY #0          ; 0: A->X
-;PrtVal
-;        TAX             ; 1: A->Y
-;        LDA $C0DE, Y
-;        INY
-;        CPY #2
-;        BEQ _JumpPrintHexXY
-;        BNE _PtrVal
-;_JumpPrintHexXY
-;        TAY
+    .if ENABLE_PTR
+        _PrintPtr:
+                STA _nHexWidth
+                JSR NxtArgToTemp
 
-        BRA PrintHexYX  ; needs XYtoVal setup
+                LDY #$0
+                LDA (_temp),Y
+                TAX
+                INY
+                LDA (_temp),Y
+                TAY
+
+                BRA PrintHexYX  ; needs XYtoVal setup
     .endif  ; ENABLE_PTR
 .endif  ; ENABLE_HEX
 
 
+.if ENABLE_STR
+; a String (APPLE text, last byte ASCII)
+; See: DCI
 ; ======================================================================
+    .if USE_STR_A
+        PrintStrA:
+                JSR NxtArgToTemp
+
+                LDY #$0
+        _PrintStrA:
+                LDA (_temp),Y
+                BPL @_LastChar
+                JSR PutChar
+                INY
+                BNE _PrintStrA
+                INC _temp+1
+                BRA _PrintStrA
+        @_LastChar:             ; intentional fall into Print
+    .endif ; USE_STR_A
+.endif  ; ENABLE_STR
+
+; Main loop of printm() ... print literal chars
+; ======================================================================
+ForceAPPLE
+        ORA #$80        
 Print
         JSR PutChar
 NextFormat              ; Adjust pointer to next char in format
@@ -602,8 +925,18 @@ GetFormat
         LDA $C0DE       ; _pFormat NOTE: self-modifying!
         BEQ _Done       ; zero-terminated
         BMI Print       ; neg = literal
-; NOTE: If all features are turned off, will get a ca65 Range Error
+
+; NOTE: If all features are turned off would get a ca65 Range Error
+; We can't use this equation since it is not const
+; due to _MetaCharEnd not being defined yet 
+;     NumMeta = _MetaCharEnd - MetaChar
+.if (NumMeta > 0)
         LDX #NumMeta-1  ; pos = meta
+.else
+        .out "INFO: No meta commands, defaulting to text"
+        BRA ForceAPPLE
+.endif
+
 FindMeta
         CMP MetaChar,X
         BEQ CallMeta
@@ -625,106 +958,122 @@ _Done
 ; d Dec 2 Byte (max 3 digits)
 ; u Dec 2 Byte (max 5 digits)
 ; ======================================================================
-PrintDec5
-        LDA #5
-        BNE _PrintDec   ; always
-PrintDec3
-        LDA #3
-        BNE _PrintDec   ; always
-PrintDec2
-        LDA #2          ; 2 digits
-_PrintDec
-        STA _nDecWidth
-        JSR NxtArgYX
+    .if USE_DEC_5
+        PrintDec5:
+                LDA #5
+                BNE _PrintDec   ; always
+    .endif
 
-PrintDecYX
-        STX _val+0      ; may be tempting to move this to NxtArgYX
-        STY _val+1      ; as XYtoVal but others call us
+    .if USE_DEC_3
+        PrintDec3:
+                LDA #3
+                BNE _PrintDec   ; always
+    .endif
 
-        STZ _bcd+0
-        STZ _bcd+1
-        STZ _bcd+2
+    .if USE_DEC_2
+        PrintDec2:
+                LDA #2          ; 2 digits
+    .endif
 
-Dec2BCD
-        LDX   #16
-        SED
-_Dec2BCD
-        ASL _val+0
-        ROl _val+1
+        _PrintDec:
+                STA _nDecWidth
+                JSR NxtArgYX
 
-        LDA _bcd+0
-        ADC _bcd+0
-        STA _bcd+0
+        PrintDecYX:
+                STX _val+0      ; may be tempting to move this to NxtArgYX
+                STY _val+1      ; as XYtoVal but others call us
 
-        LDA _bcd+1
-        ADC _bcd+1
-        STA _bcd+1
+                STZ _bcd+0
+                STZ _bcd+1
+                STZ _bcd+2
 
-        LDA _bcd+2
-        ADC _bcd+2
-        STA _bcd+2
+        Dec2BCD:
+                LDX   #16
+                SED
+        _Dec2BCD:
+                ASL _val+0
+                ROl _val+1
 
-        DEX
-        BNE _Dec2BCD
-        CLD
+                LDA _bcd+0
+                ADC _bcd+0
+                STA _bcd+0
 
-BCD2Char
-        LDX #2
-        LDY #5
-_BCD2Char
-        LDA _bcd,X  ; __c???    _b_?XX  a_YYXX
-        LSR
-        LSR
-        LSR
-        LSR
-        CLC
-        ADC #'0'+$80
-        STA _bcd,Y  ; __c??X    _b_YXX  aZYYXX
-        DEY
+                LDA _bcd+1
+                ADC _bcd+1
+                STA _bcd+1
 
-        LDA _bcd,X  ; __c??X    _b_YXX  aZYYXX
-        AND #$F
-        CLC
-        ADC #'0'+$80
-        STA _bcd,Y  ; __c?XX    _bYYXX  ZZYYXX
-        DEY
-        DEX
-        BPL _BCD2Char
+                LDA _bcd+2
+                ADC _bcd+2
+                STA _bcd+2
 
-DecWidth
-        LDX #0      ; _nDecDigits NOTE: self-modifying!
-        JMP PrintReverseBCD
+                DEX
+                BNE _Dec2BCD
+                CLD
+
+        BCD2Char:
+                LDX #2
+                LDY #5
+        _BCD2Char:
+                LDA _bcd,X  ; __c???    _b_?XX  a_YYXX
+                LSR
+                LSR
+                LSR
+                LSR
+                CLC
+                ADC #'0'+$80
+                STA _bcd,Y  ; __c??X    _b_YXX  aZYYXX
+                DEY
+
+                LDA _bcd,X  ; __c??X    _b_YXX  aZYYXX
+                AND #$F
+                CLC
+                ADC #'0'+$80
+                STA _bcd,Y  ; __c?XX    _bYYXX  ZZYYXX
+                DEY
+                DEX
+                BPL _BCD2Char
+
+        DecWidth:
+                LDX #0      ; _nDecDigits NOTE: self-modifying!
+                JMP PrintReverseBCD
 .endif  ; ENABLE_DEC
 
+; ______________________________________________________________________
 
 .if ENABLE_BIN
-; % Bin 1 Byte normal  one's and zeros
-; ? Bin 1 Byte inverse one's, normal zeroes
+; % Bin 1 Byte normal  ones, normal zeroes
+; ? Bin 1 Byte inverse ones, normal zeroes
 ; ======================================================================
-PrintBinInv
-        LDA #$81
-        BNE _PrintBin
-PrintBinAsc
-        LDA #$01
-_PrintBin
-        STA _PrintBit+1
-        JSR NxtArgYX    ; X = low byte
+    .if USE_BIN_INV
+        PrintBinInv:
+                LDA #$81
+                BNE _PrintBin
+    .endif  ; USE_BIN_INV
 
-        LDY #8          ; print 8 bits
-_Bit2Asc
-        TXA
-        CMP #$80        ; C= A>=$80
-        ROL             ; C<-76543210<-C
-        TAX
-        AND #$01        ; 0 -> B0
-        BEQ _FlipBit
-_PrintBit
-        LDA #$81        ; 1 -> 31 NOTE: self-modifying!
-_FlipBit
-        EOR #$B0
-        JSR PutChar
-        DEY
-        BNE _Bit2Asc
+    .if USE_BIN_ASC
+        PrintBinAsc:
+                LDA #$01
+    .endif  ; USE_BIN_ASC
+
+        _PrintBin:
+                STA _PrintBit+1
+                JSR NxtArgYX    ; X = low byte
+
+                LDY #8          ; print 8 bits
+        _Bit2Asc:
+                TXA
+                CMP #$80        ; C= A>=$80
+                ROL             ; C<-76543210<-C
+                TAX
+                AND #$01        ; 0 -> B0
+                BEQ _FlipBit
+        _PrintBit:
+                LDA #$81        ; 1 -> 31 NOTE: self-modifying!
+        _FlipBit:
+                EOR #$B0
+                JSR PutChar
+                DEY
+                BNE _Bit2Asc
 .endif  ; ENABLE_BIN
 
 _JumpNextFormat
@@ -734,86 +1083,68 @@ _JumpNextFormat
 ; b Print a signed byte in decimal
 ; ======================================================================
 .if ENABLE_DEC
-    .if ENABLE_BYTE
-PrintByte
-        JSR NxtArgYX    ; X = low byte
-        TXA
-        BPL PrintBytePos
-        LDA #'-' + $80  ; X >= $80 --> $80 (-128) .. $FF (-1)
-        JSR PutChar
-        TXA
-        EOR #$FF        ; 2's complement
-        AND #$7F
-        CLC
-        ADC #$01
-PrintBytePos
-        TAX
+    .if USE_DEC_BYTE
+        PrintByte:
+                JSR NxtArgYX    ; X = low byte
+                TXA
+                BPL PrintBytePos
+                LDA #'-' + $80  ; X >= $80 --> $80 (-128) .. $FF (-1)
+                JSR PutChar
+                TXA
+                EOR #$FF        ; 2's complement
+                AND #$7F
+                CLC
+                ADC #$01
+        PrintBytePos:
+                TAX
 
-        LDY #00         ; 00XX
-        LDA #3          ; 3 digits max
-        STA _nDecWidth
-        JMP PrintDecYX  ; needs XYtoVal setup
-    .endif ; ENABLE_BYTE
+                LDY #00         ; 00XX
+                LDA #3          ; 3 digits max
+                STA _nDecWidth
+                JMP PrintDecYX  ; needs XYtoVal setup
+    .endif ; USE_DEC_BYTE
 .endif  ; ENABLE_DEC
+
+; ______________________________________________________________________
 
 
 .if ENABLE_STR
-; a String (APPLE text, last byte ASCII)
-; See: DCI
-; ======================================================================
-PrintStrA
-        JSR NxtArgToTemp
-
-        LDY #$0
-_PrintStrA
-        LDA (_temp),Y
-        BPL @_LastChar
-        JSR PutChar
-        INY
-        BNE _PrintStrA
-        INC _temp+1
-        BRA _PrintStrA
-@_LastChar
-; 6 byte:
-;        LDX #1
-;        ORA #$80
-;        BRA _PrintCharA
-; 5 byte:
-        ORA #$80
-        JMP Print
 
 ; s String (C,ASCIIZ)
 ; ======================================================================
-PrintStrC
-        JSR NxtArgToTemp
+    .if USE_STR_C
+        PrintStrC:
+                JSR NxtArgToTemp
 
-        LDY #$0
-@_NextByte
-        LDA (_temp),Y
-        BEQ _JumpNextFormat
-        JSR PutChar
-        INY
-        BNE @_NextByte
-        INC _temp+1
-        BRA @_NextByte
+                LDY #$0
+        @_NextByte:
+                LDA (_temp),Y
+                BEQ _JumpNextFormat
+                JSR PutChar
+                INY
+                BNE @_NextByte
+                INC _temp+1
+                BRA @_NextByte
+    .endif
 
 ; p String (Pascal)
 ; ======================================================================
-PrintStrP
-        JSR NxtArgToTemp
+    .if USE_STR_PASCAL
+        PrintStrP:
+                JSR NxtArgToTemp
 
-        LDY #$0
-        LDA (_temp),Y
-        BEQ _JumpNextFormat
-        TAX
-_PrintStrP
-        INY
-        LDA (_temp),Y
-_PrintCharA
-        JSR PutChar
-        DEX
-        BNE _PrintStrP
-        BEQ _JumpNextFormat ; always
+                LDY #$0
+                LDA (_temp),Y
+                BEQ _JumpNextFormat
+                TAX
+        _PrintStrP:
+                INY
+                LDA (_temp),Y
+                JSR PutChar
+                DEX
+                BNE _PrintStrP
+                BEQ _JumpNextFormat ; always
+    .endif
 .endif  ; ENABLE_STR
 
 ; __________ Utility __________
@@ -862,60 +1193,103 @@ _val    dw  0   ; PrintHex2 PrintHex4 temp
 MetaChar
 
 .if ENABLE_BIN
+    .if USE_BIN_INV
         db '?'  ; PrintBinInv   NOTE: 1's printed in inverse
+    .endif
+    .if USE_BIN_INV
         db '%'  ; PrintBinAsc
+    .endif
 .endif
 .if ENABLE_DEC
-    .if ENABLE_BYTE
+    .if USE_DEC_BYTE
         db 'b'  ; PrintByte     NOTE: Signed -128 .. +127
     .endif
+    .if USE_DEC_5
         db 'u'  ; PrintDec5
+    .endif
+    .if USE_DEC_3
         db 'd'  ; PrintDec3
+    .endif
+    .if USE_DEC_2
         db '#'  ; PrintDec2
+    .endif
 .endif
 .if ENABLE_HEX
+    .if USE_HEX_4
         db 'x'  ; PrintHex4
+    .endif
+    .if USE_HEX_4
         db '$'  ; PrintHex2
-    .if ENABLE_PTR
+    .endif
+    .if USE_PTR_2
         db '&'  ; PrintPtr4
+    .endif
+    .if USE_PTR_4
         db '@'  ; PrintPtr2
     .endif
 .endif
 .if ENABLE_STR
+    .if USE_STR_PASCAL
         db 'p'  ; PrintStrP     NOTE: Pascal string; C printf 'p' is pointer!
+    .endif
+    .if USE_STR_C
         db 's'  ; PrintStrC     NOTE: C string, zero terminated
+    .endif
+    .if USE_STR_A
         db 'a'  ; PrintStrA     NOTE: Last byte is ASCII
+    .endif
 .endif
 
 _MetaCharEnd
-NumMeta = _MetaCharEnd - MetaChar
 
 MetaFunc
 
 .if ENABLE_BIN
+    .if USE_BIN_INV
         dw PrintBinInv
+    .endif
+    .if USE_BIN_ASC
         dw PrintBinAsc
+    .endif
 .endif
 .if ENABLE_DEC
-    .if ENABLE_BYTE
+    .if USE_DEC_BYTE
         dw PrintByte
     .endif
+    .if USE_DEC_5
         dw PrintDec5
+    .endif
+    .if USE_DEC_3
         dw PrintDec3
+    .endif
+    .if USE_DEC_2
         dw PrintDec2
+    .endif
 .endif
 .if ENABLE_HEX
+    .if USE_HEX_4
         dw PrintHex4
+    .endif
+    .if USE_HEX_2
         dw PrintHex2
-    .if ENABLE_PTR
+    .endif
+    .if USE_PTR_4
         dw PrintPtr4
+    .endif
+    .if USE_PTR_2
         dw PrintPtr2
     .endif
 .endif
 .if ENABLE_STR
+    .if USE_STR_PASCAL
         dw PrintStrP
+    .endif
+    .if USE_STR_C
         dw PrintStrC
+    .endif
+    .if USE_STR_A
         dw PrintStrA
+    .endif
 .endif
 
 __END
