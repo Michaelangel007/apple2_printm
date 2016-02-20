@@ -5,7 +5,7 @@
 .feature leading_dot_in_identifiers
 .PC02 ; 65C02
 
-/* Version 27
+/* Version 28
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -97,7 +97,7 @@ to control the memory footprint since you probably
 don't need "every" feature. Seriously, when was the last time
 you _needed_ octal? :-)
 
-With everything enabled printm() takes up $1E1 = 481 bytes
+With everything enabled printm() takes up $1DC = 476 bytes
 (Plus 2 bytes in zero page.)
 
 Whoa! I thought you said this was micro!?
@@ -976,7 +976,8 @@ NextArg
 DEBUG .sprintf( "PrintHex4() @ %X", * )
         PrintHex4:
                 LDA #4
-                BNE _PrintHex
+                ;BNE _PrintHex
+                db $2C          ; BIT $abs skip next instruction
     .endif
 
     .if USE_HEX_2
@@ -1041,7 +1042,8 @@ PrintReverseBCD
 DEBUG .sprintf( "PrintPtr4() @ %X", * )
         PrintPtr4:
                 LDA #4
-                BNE _PrintPtr
+                ;BNE _PrintPtr
+                db $2C          ; BIT $abs skip next instruction
     .endif
 
     .if USE_PTR_2
@@ -1151,7 +1153,8 @@ DEBUG .sprintf( "PrintDec5() @ %X", * )
 DEBUG .sprintf( "PrintDec3() @ %X", * )
         PrintDec3:
                 LDA #3
-                BNE _PrintDec   ; always
+                ;BNE _PrintDec   ; always
+                db $2C          ; BIT $abs skip next instruction
     .endif
 
     .if USE_DEC_2
@@ -1247,7 +1250,8 @@ NEW_PRINT_DEC = 0
 DEBUG .sprintf( "PrintBinI() @ %X", * )
         PrintBinInv:
                 LDA #$31
-                BNE _PrintBin
+                ;BNE _PrintBin
+                db $2C          ; BIT $abs skip next instruction
     .endif  ; USE_BIN_INV
 
     .if USE_BIN_ASC
@@ -1314,7 +1318,8 @@ DEBUG .sprintf( "PrintDecB() @ %X", * )
 DEBUG .sprintf( "PrintOct6() @ %X", * )
         PrintOct6:
                 LDA #6
-                BNE _PrintOct
+                ;BNE _PrintOct
+                db $2C          ; BIT $abs skip next instruction
     .endif
     .if USE_OCT_3
 DEBUG .sprintf( "PrintOct3() @ %X", * )
