@@ -1,7 +1,7 @@
 ; ca65
 .feature c_comments
 
-/* Version 21
+/* Version 22
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -1218,17 +1218,21 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
                 ASL _val+0
                 ROl _val+1
 
-                LDA _bcd+0
-                ADC _bcd+0
-                STA _bcd+0
+                LDY #$FC
+        @DoubleDabble:
+                LDA _bcd-$FC,Y
+                ADC _bcd-$FC,Y
+                STA _bcd-$FC,Y
+                INY
+                BNE @DoubleDabble
 
-                LDA _bcd+1
-                ADC _bcd+1
-                STA _bcd+1
-
-                LDA _bcd+2
-                ADC _bcd+2
-                STA _bcd+2
+;                LDA _bcd+1
+;                ADC _bcd+1
+;                STA _bcd+1
+;
+;                LDA _bcd+2
+;                ADC _bcd+2
+;                STA _bcd+2
 
                 DEX
                 BNE _Dec2BCD
