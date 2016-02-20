@@ -1,11 +1,11 @@
 ; ca65
 .feature c_comments
 
-/* Version 18
+/* Version 19
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
-Special Thanks: Sheldon for his 65C02 printf() source
+Special Thanks: Sheldon for his 65C02 printf() source, qkumba optimizations
 
 Problem:
 
@@ -93,12 +93,12 @@ to control the memory footprint since you probably
 don't need "every" feature. Seriously, when was the last time
 you _needed_ octal? :-)
 
-With everything enabled printm() takes up $205 = 517 bytes
+With everything enabled printm() takes up $207 = 519 bytes
 (Plus 2 bytes in zero page.)
 
 Whoa! I thought you said this was micro!?
 
-With all 15 features turned OFF the core routines use $64 = 100 bytes.
+With all 15 features turned OFF the core routines use $62 = 98 bytes.
 
 With the common setting (default):
     BinAsc, Dec2, Dec3, Dec5, Hex2, Hex4, and StrA
@@ -117,7 +117,7 @@ To toggle features on / off change USE_* to 0 or 1:
 ;
 ;           Feature  Size Bytes Total            Notes
 USE_BIN_ASC     = 1 ; $84 132 \
-USE_BIN_INV     = 1 ; $86 134 /  $8B (139 bytes) 
+USE_BIN_INV     = 1 ; $86 134 /  $8B (139 bytes)
 USE_DEC_2       = 1 ; $D7 215 \
 USE_DEC_3       = 1 ; $D9 217   $106 (262 bytes)
 USE_DEC_5       = 1 ; $D9 217
@@ -193,8 +193,8 @@ Demo + Library text dump:
 41B0:C8 D0 F6 60 A2 08 85 FE
 41B8:06 FE 6A CA D0 FA 60 A9
 41C0:A0 4C ED FD 98 20 C1 FB
-41C8:A6 28 A4 29 8E DA 44 8C
-41D0:DB 44 60 D8 BD 23 A0 D9
+41C8:A6 28 A4 29 8E D8 44 8C
+41D0:D9 44 60 D8 BD 23 A0 D9
 41D8:BD 64 A0 A4 BD 78 BA 40
 41E0:A0 25 FE 3F 00 D3 41 27
 41E8:00 BF 00 DE C0 DE C0 1A
@@ -236,72 +236,72 @@ Demo + Library text dump:
 4308:F9 F4 E5 F3 8D A0 A0 A0
 4310:A0 AE E6 E5 E1 F4 F5 F2
 4318:E5 F3 A0 BD A0 A4 A0 A0
-4320:00 09 02 A9 04 D0 16 8E
-4328:E7 44 8C E8 44 9C E5 44
-4330:20 E0 44 8E BB 43 8C BC
+4320:00 07 02 A9 04 D0 16 8E
+4328:E5 44 8C E6 44 9C E3 44
+4330:20 DE 44 8E BB 43 8C BC
 4338:43 80 7F A9 02 8D 75 43
-4340:20 E0 44 8E FD 44 8C FE
-4348:44 A2 00 AD FD 44 29 0F
+4340:20 DE 44 8E FB 44 8C FC
+4348:44 A2 00 AD FB 44 29 0F
 4350:C9 0A 90 02 69 06 69 B0
-4358:9D F7 44 4E FE 44 6E FD
-4360:44 4E FE 44 6E FD 44 4E
-4368:FE 44 6E FD 44 4E FE 44
-4370:6E FD 44 E8 E0 04 D0 D3
-4378:CA 30 37 BD F7 44 20 D9
+4358:9D F5 44 4E FC 44 6E FB
+4360:44 4E FC 44 6E FB 44 4E
+4368:FC 44 6E FB 44 4E FC 44
+4370:6E FB 44 E8 E0 04 D0 D3
+4378:CA 30 37 BD F5 44 20 D7
 4380:44 80 F5 A9 04 D0 02 A9
-4388:02 8D 75 43 20 E0 44 A0
+4388:02 8D 75 43 20 DE 44 A0
 4390:00 B1 FE AA C8 B1 FE A8
-4398:80 A9 20 E0 44 A0 00 B1
-43A0:FE 10 0A 20 D9 44 C8 D0
+4398:80 A9 20 DE 44 A0 00 B1
+43A0:FE 10 0A 20 D7 44 C8 D0
 43A8:F6 E6 FF 80 F2 09 80 20
-43B0:D9 44 EE BB 43 D0 03 EE
-43B8:BC 43 AD DE C0 F0 14 30
-43C0:EE A2 0E DD FF 44 F0 05
-43C8:CA 10 F8 30 E5 8A 0A AA
-43D0:7C 0E 45 60 A9 05 D0 06
-43D8:A9 03 D0 02 A9 02 8D 3D
-43E0:44 20 E0 44 8E FD 44 8C
-43E8:FE 44 9C F7 44 9C F8 44
-43F0:9C F9 44 A2 10 F8 0E FD
-43F8:44 2E FE 44 AD F7 44 6D
-4400:F7 44 8D F7 44 AD F8 44
-4408:6D F8 44 8D F8 44 AD F9
-4410:44 6D F9 44 8D F9 44 CA
-4418:D0 DC D8 A2 02 A0 05 BD
-4420:F7 44 4A 4A 4A 4A 18 69
-4428:B0 99 F7 44 88 BD F7 44
-4430:29 0F 18 69 B0 99 F7 44
-4438:88 CA 10 E3 A2 00 4C 78
-4440:43 A9 81 D0 02 A9 01 8D
-4448:59 44 20 E0 44 A0 08 8A
-4450:C9 80 2A AA 29 01 F0 02
-4458:A9 81 49 B0 20 D9 44 88
-4460:D0 ED 4C B2 43 20 E0 44
-4468:8A 10 0D A9 AD 20 D9 44
-4470:8A 49 FF 29 7F 18 69 01
-4478:AA A0 00 A9 03 8D 3D 44
-4480:4C E4 43 A9 06 D0 02 A9
-4488:03 8D AD 44 20 E0 44 A2
-4490:00 A5 FE 29 07 18 69 B0
-4498:9D F7 44 46 FF 66 FE 46
-44A0:FF 66 FE 46 FF 66 FE E8
-44A8:E0 06 D0 E5 A2 06 4C 78
-44B0:43 20 E0 44 A0 00 B1 FE
-44B8:F0 A8 20 D9 44 C8 D0 F6
-44C0:E6 FF 80 F2 20 E0 44 A0
-44C8:00 B1 FE F0 95 AA C8 B1
-44D0:FE 20 D9 44 CA D0 F7 F0
-44D8:89 8D DE C0 EE DA 44 60
-44E0:20 E4 44 AA A0 00 B9 DE
-44E8:C0 EE E5 44 D0 03 EE E8
-44F0:44 A8 86 FE 84 FF 60 00
-44F8:00 00 00 00 00 00 00 3F
-4500:25 62 75 64 23 78 24 26
-4508:40 4F 6F 70 73 61 41 44
-4510:45 44 65 44 D4 43 D8 43
-4518:DC 43 23 43 3B 43 83 43
-4520:87 43 83 44 87 44 C4 44
-4528:B1 44 9A 43
+43B0:D7 44 EE BB 43 D0 03 EE
+43B8:BC 43 AD DE C0 F0 12 30
+43C0:EE A2 0F CA 30 EC DD FD
+43C8:44 D0 F8 8A 0A AA 7C 0C
+43D0:45 60 A9 05 D0 06 A9 03
+43D8:D0 02 A9 02 8D 3B 44 20
+43E0:DE 44 8E FB 44 8C FC 44
+43E8:9C F5 44 9C F6 44 9C F7
+43F0:44 A2 10 F8 0E FB 44 2E
+43F8:FC 44 AD F5 44 6D F5 44
+4400:8D F5 44 AD F6 44 6D F6
+4408:44 8D F6 44 AD F7 44 6D
+4410:F7 44 8D F7 44 CA D0 DC
+4418:D8 A2 02 A0 05 BD F5 44
+4420:4A 4A 4A 4A 18 69 B0 99
+4428:F5 44 88 BD F5 44 29 0F
+4430:18 69 B0 99 F5 44 88 CA
+4438:10 E3 A2 00 4C 78 43 A9
+4440:81 D0 02 A9 01 8D 57 44
+4448:20 DE 44 A0 08 8A C9 80
+4450:2A AA 29 01 F0 02 A9 81
+4458:49 B0 20 D7 44 88 D0 ED
+4460:4C B2 43 20 DE 44 8A 10
+4468:0D A9 AD 20 D7 44 8A 49
+4470:FF 29 7F 18 69 01 AA A0
+4478:00 A9 03 8D 3B 44 4C E2
+4480:43 A9 06 D0 02 A9 03 8D
+4488:AB 44 20 DE 44 A2 00 A5
+4490:FE 29 07 18 69 B0 9D F5
+4498:44 46 FF 66 FE 46 FF 66
+44A0:FE 46 FF 66 FE E8 E0 06
+44A8:D0 E5 A2 06 4C 78 43 20
+44B0:DE 44 A0 00 B1 FE F0 A8
+44B8:20 D7 44 C8 D0 F6 E6 FF
+44C0:80 F2 20 DE 44 A0 00 B1
+44C8:FE F0 95 AA C8 B1 FE 20
+44D0:D7 44 CA D0 F7 F0 89 8D
+44D8:DE C0 EE D8 44 60 20 E2
+44E0:44 AA A0 00 B9 DE C0 EE
+44E8:E3 44 D0 03 EE E6 44 A8
+44F0:86 FE 84 FF 60 00 00 00
+44F8:00 00 00 00 00 3F 25 62
+4500:75 64 23 78 24 26 40 4F
+4508:6F 70 73 61 3F 44 43 44
+4510:63 44 D2 43 D6 43 DA 43
+4518:23 43 3B 43 83 43 87 43
+4520:81 44 85 44 C2 44 AF 44
+4528:9A 43
 
 */
 
@@ -684,7 +684,6 @@ DEBUG "____:StrP"
         JSR PrintStringZ
 
         LDX GetNumFeatures+1
-        INX
         STX demotmp+0
         STZ demotmp+1
         TXA
@@ -1153,18 +1152,17 @@ GetFormat
 ; Instead we count the number of features enabled
 GetNumFeatures
 .if (NumMeta > 0)
-        LDX #NumMeta-1  ; pos = meta
+        LDX #NumMeta  ; pos = meta
 .else
         .out "INFO: No meta commands, defaulting to text"
         BRA ForceAPPLE
 .endif
 
 FindMeta
-        CMP MetaChar,X
-        BEQ CallMeta
         DEX
-        BPL FindMeta
-        BMI NextFormat  ; always = invalid meta; ignore
+        BMI NextFormat
+        CMP MetaChar,X
+        BNE FindMeta
 CallMeta
         TXA
         ASL
@@ -1597,4 +1595,4 @@ __END
 
 DEBUG .sprintf( "Lib   Size: %X (%d bytes)", __LIB_SIZE  , __LIB_SIZE  )
 DEBUG .sprintf( "Total Size: %X (%d bytes)", __END-__MAIN, __END-__MAIN)
- 
+
