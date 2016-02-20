@@ -5,7 +5,7 @@
 .feature leading_dot_in_identifiers
 .PC02 ; 65C02
 
-/* Version 26
+/* Version 27
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -716,7 +716,7 @@ PrintDec
 
         LDX #5          ; was Y
         DEY             ; $FF - $FD = 2
-@_BCD2Char:             ; NOTE: Digits are reversed!
+@BCD2Char:              ; NOTE: Digits are reversed!
         LDA _bcd-$FD,Y  ; __c???   _b_?XX   a_YYXX
         LSR
         LSR
@@ -733,7 +733,7 @@ PrintDec
         JSR COUT
         DEY
         DEX
-        BPL @_BCD2Char
+        BPL @BCD2Char
         RTS
 
 ; NOTE: Can't use printm PrintStr*() as it may not be enabled/available
@@ -1192,9 +1192,13 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
                 BNE @Dec2BCD
                 CLD
 
+NEW_PRINT_DEC = 0
+.if NEW_PRINT_DEC
+        DecWidth:
+.endif
                 LDX #5          ; was Y
                 DEY             ; $FF - $FD = 2
-        @_BCD2Char:             ; NOTE: Digits are reversed!
+        @BCD2Char:              ; NOTE: Digits are reversed!
                 LDA _bcd-$FD,Y  ; __c???   _b_?XX   a_YYXX
                 LSR
                 LSR
@@ -1202,21 +1206,35 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
                 LSR
                 CLC
                 ADC #'0'+$80
+.if NEW_PRINT_DEC
+                JSR PutChar
+.else
                 STA _bcd,X      ; __c??X   _b_YXX   aZYYXX
+.endif
                 DEX             ; was Y
-
+.if NEW_PRINT_DEC
+                BMI NextFormat
+.endif
                 LDA _bcd-$FD,Y  ; __c??X   _b_YXX   aZYYXX
                 AND #$F
                 CLC
                 ADC #'0'+$80
+.if NEW_PRINT_DEC
+                JSR PutChar
+.else
                 STA _bcd,X      ; __c?XX   _bYYXX   ZZYYXX
+.endif
                 DEY
                 DEX
-                BPL @_BCD2Char
+                BPL @BCD2Char
 
+.if NEW_PRINT_DEC
+                BMI NextFormat  ; always
+.else
         DecWidth:
                 LDX #0      ; _nDecDigits NOTE: self-modifying!
                 JMP PrintReverseBCD
+.endif
 .endif  ; ENABLE_DEC
 
 ; ______________________________________________________________________
