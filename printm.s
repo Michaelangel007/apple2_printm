@@ -5,7 +5,7 @@
 .feature leading_dot_in_identifiers
 .PC02 ; 65C02
 
-/* Version 24
+/* Version 25
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -691,54 +691,36 @@ DEBUG "____:StrP"
 ; ======================================================================
 
 ;        ds 256 - <*
-_digits ds 6
 
 ; Print demotmp in Decimal
+; NOTE: Can't use printm PrintDec5 as it may not be enabled/available
 PrintDec
-        LDX #<_digits
-        LDY #>_digits
-        STX demoptr+0
-        STY demoptr+1
+        STZ _bcd+0
+        STZ _bcd+1
+        STZ _bcd+2
 
-        STZ _digits+0
-        STZ _digits+1
-        STZ _digits+2
-
-        LDY #0
         LDX #16         ; 16 bits
         SED             ; Double Dabble
-@Hex2BCD:
+@Dec2BCD:
         ASL demotmp+0
         ROL demotmp+1
 
-.if 1
-.repeat 3
-        LDA (demoptr),Y
-        ADC (demoptr),Y
-        STA (demoptr),Y
+        LDY #$FD
+@DoubleDabble:
+        LDA _bcd-$FD,Y
+        ADC _bcd-$FD,Y
+        STA _bcd-$FD,Y
         INY
-.endrep
-.else
-        LDA _digits+0
-        ADC _digits+0
-        STA _digits+0
+        BNE @DoubleDabble
 
-        LDA _digits+1
-        ADC _digits+1
-        STA _digits+1
-
-        LDA _digits+2
-        ADC _digits+2
-        STA _digits+2
-.endif
-        LDY #0
         DEX
-        BNE @Hex2BCD
+        BNE @Dec2BCD
         CLD
 
-        LDX #2
-@PrintBCD
-        LDA _digits, X
+        LDX #5          ; was Y
+        DEY             ; $FF - $FD = 2
+@_BCD2Char:             ; NOTE: Digits are reversed!
+        LDA _bcd-$FD,Y  ; __c???   _b_?XX   a_YYXX
         LSR
         LSR
         LSR
@@ -746,16 +728,18 @@ PrintDec
         CLC
         ADC #'0'+$80
         JSR COUT
-        LDA _digits, X
+        DEX
+        LDA _bcd-$FD,Y  ; __c??X   _b_YXX   aZYYXX
         AND #$F
         CLC
         ADC #'0'+$80
         JSR COUT
+        DEY
         DEX
-        BPL @PrintBCD
+        BPL @_BCD2Char
         RTS
 
-; Can't use printm PrintStr*() as it may not be enabled/available
+; NOTE: Can't use printm PrintStr*() as it may not be enabled/available
 PrintStringZ
         STX demoptr+0
         STY demoptr+1
@@ -1211,10 +1195,9 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
                 BNE _Dec2BCD
                 CLD
 
-        BCD2Char:
                 LDX #5          ; was Y
                 DEY             ; $FF - $FD = 2
-        _BCD2Char:              ; NOTE: Digits are reversed!
+        @_BCD2Char:             ; NOTE: Digits are reversed!
                 LDA _bcd-$FD,Y  ; __c???   _b_?XX   a_YYXX
                 LSR
                 LSR
@@ -1232,7 +1215,7 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
                 STA _bcd,X      ; __c?XX   _bYYXX   ZZYYXX
                 DEY
                 DEX
-                BPL _BCD2Char
+                BPL @_BCD2Char
 
         DecWidth:
                 LDX #0      ; _nDecDigits NOTE: self-modifying!
