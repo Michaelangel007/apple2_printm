@@ -1,7 +1,7 @@
 ; ca65
 .feature c_comments
 
-/* Version 20
+/* Version 21
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -93,7 +93,7 @@ to control the memory footprint since you probably
 don't need "every" feature. Seriously, when was the last time
 you _needed_ octal? :-)
 
-With everything enabled printm() takes up $203 = 515 bytes
+With everything enabled printm() takes up $1FF = 511 bytes
 (Plus 2 bytes in zero page.)
 
 Whoa! I thought you said this was micro!?
@@ -1318,11 +1318,9 @@ DEBUG .sprintf( "PrintDecB() @ %X", * )
                 JSR PutChar
                 TXA
                 EOR #$FF        ; 2's complement
-                AND #$7F
-                CLC
-                ADC #$01
-        PrintBytePos:
                 TAX
+                INX
+        PrintBytePos:
 
                 LDY #00         ; 00XX
                 LDA #3          ; 3 digits max
@@ -1353,6 +1351,7 @@ DEBUG .sprintf( "PrintOct3() @ %X", * )
                 JSR NxtArgYX    ; X = low byte
 
                 LDX #0
+                LDY #3
         @_Oct2Asc:
                 LDA _temp
                 AND #7
@@ -1360,14 +1359,11 @@ DEBUG .sprintf( "PrintOct3() @ %X", * )
                 ADC #'0'+$80
                 STA _bcd,x      ; NOTE: Digits are reversed!
 
+        @OctShr:
                 LSR _temp+1
                 ROR _temp+0
-
-                LSR _temp+1
-                ROR _temp+0
-
-                LSR _temp+1
-                ROR _temp+0
+                DEY
+                BNE @OctShr
 
                 INX
                 CPX #6
