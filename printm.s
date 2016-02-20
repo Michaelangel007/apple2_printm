@@ -1,7 +1,7 @@
 ; ca65
 .feature c_comments
 
-/* Version 22
+/* Version 23
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -93,7 +93,7 @@ to control the memory footprint since you probably
 don't need "every" feature. Seriously, when was the last time
 you _needed_ octal? :-)
 
-With everything enabled printm() takes up $1FF = 511 bytes
+With everything enabled printm() takes up $1E1 = 481 bytes
 (Plus 2 bytes in zero page.)
 
 Whoa! I thought you said this was micro!?
@@ -174,7 +174,7 @@ Demo + Library text dump:
 4118:43 85 FF 20 DA FD AD 20
 4120:43 85 FE 20 DA FD 20 BE
 4128:41 20 4F 41 A2 05 A0 43
-4130:20 A2 41 AE C1 43 86 FE
+4130:20 A2 41 AE B4 43 86 FE
 4138:64 FF 8A 20 DA FD 20 BE
 4140:41 20 4F 41 A9 8D 4C ED
 4148:FD 00 00 00 00 00 00 A2
@@ -193,7 +193,7 @@ Demo + Library text dump:
 41B0:D0 F6 60 A2 08 85 FE 06
 41B8:FE 6A CA D0 FA 60 A9 A0
 41C0:4C ED FD 98 20 C1 FB A6
-41C8:28 A4 29 8E D7 44 8C D8
+41C8:28 A4 29 8E B1 44 8C B2
 41D0:44 60 D8 BD 23 A0 D9 BD
 41D8:64 A0 A4 BD 78 BA 40 A0
 41E0:25 FE 3F 00 D2 41 27 00
@@ -236,72 +236,67 @@ Demo + Library text dump:
 4308:F4 E5 F3 8D A0 A0 A0 A0
 4310:AE E6 E5 E1 F4 F5 F2 E5
 4318:F3 A0 BD A0 A4 A0 A0 00
-4320:07 02 A9 04 D0 16 8E E4
-4328:44 8C E5 44 9C E2 44 20
-4330:DD 44 8E BA 43 8C BB 43
-4338:80 7F A9 02 8D 74 43 20
-4340:DD 44 8E FA 44 8C FB 44
-4348:A2 00 AD FA 44 29 0F C9
+4320:E1 01 A9 04 D0 16 8E BE
+4328:44 8C BF 44 9C BC 44 20
+4330:B7 44 8E AD 43 8C AE 43
+4338:80 72 A9 02 8D 67 43 20
+4340:B7 44 8E D4 44 8C D5 44
+4348:A2 00 AD D4 44 29 0F C9
 4350:0A 90 02 69 06 69 B0 9D
-4358:F4 44 4E FB 44 6E FA 44
-4360:4E FB 44 6E FA 44 4E FB
-4368:44 6E FA 44 4E FB 44 6E
-4370:FA 44 E8 E0 04 D0 D3 CA
-4378:30 37 BD F4 44 20 D6 44
-4380:80 F5 A9 04 D0 02 A9 02
-4388:8D 74 43 20 DD 44 A0 00
-4390:B1 FE AA C8 B1 FE A8 80
-4398:A9 20 DD 44 A0 00 B1 FE
-43A0:10 0A 20 D6 44 C8 D0 F6
-43A8:E6 FF 80 F2 09 80 20 D6
-43B0:44 EE BA 43 D0 03 EE BB
-43B8:43 AD DE C0 F0 12 30 EE
-43C0:A2 0F CA 30 EC DD FC 44
-43C8:D0 F8 8A 0A AA 7C 0B 45
-43D0:60 A9 05 D0 06 A9 03 D0
-43D8:02 A9 02 8D 3A 44 20 DD
-43E0:44 8E FA 44 8C FB 44 9C
-43E8:F4 44 9C F5 44 9C F6 44
-43F0:A2 10 F8 0E FA 44 2E FB
-43F8:44 AD F4 44 6D F4 44 8D
-4400:F4 44 AD F5 44 6D F5 44
-4408:8D F5 44 AD F6 44 6D F6
-4410:44 8D F6 44 CA D0 DC D8
-4418:A2 02 A0 05 BD F4 44 4A
-4420:4A 4A 4A 18 69 B0 99 F4
-4428:44 88 BD F4 44 29 0F 18
-4430:69 B0 99 F4 44 88 CA 10
-4438:E3 A2 00 4C 77 43 A9 81
-4440:D0 02 A9 01 8D 56 44 20
-4448:DD 44 A0 08 8A C9 80 2A
-4450:AA 29 01 F0 02 A9 81 49
-4458:B0 20 D6 44 88 D0 ED 4C
-4460:B1 43 20 DD 44 8A 10 0D
-4468:A9 AD 20 D6 44 8A 49 FF
-4470:29 7F 18 69 01 AA A0 00
-4478:A9 03 8D 3A 44 4C E1 43
-4480:A9 06 D0 02 A9 03 8D AA
-4488:44 20 DD 44 A2 00 A5 FE
-4490:29 07 18 69 B0 9D F4 44
-4498:46 FF 66 FE 46 FF 66 FE
-44A0:46 FF 66 FE E8 E0 06 D0
-44A8:E5 A2 06 4C 77 43 20 DD
-44B0:44 A0 00 B1 FE F0 A8 20
-44B8:D6 44 C8 D0 F6 E6 FF 80
-44C0:F2 20 DD 44 A0 00 B1 FE
-44C8:F0 95 AA C8 B1 FE 20 D6
-44D0:44 CA D0 F7 F0 89 8D DE
-44D8:C0 EE D7 44 60 20 E1 44
-44E0:AA A0 00 B9 DE C0 EE E2
-44E8:44 D0 03 EE E5 44 A8 86
-44F0:FE 84 FF 60 00 00 00 00
-44F8:00 00 00 00 3F 25 62 75
-4500:64 23 78 24 26 40 4F 6F
-4508:70 73 61 3E 44 42 44 62
-4510:44 D1 43 D5 43 D9 43 22
-4518:43 3A 43 82 43 86 43 80
-4520:44 84 44 C1 44 AE 44 99
-4528:43
+4358:CE 44 A0 04 4E D5 44 6E
+4360:D4 44 88 D0 F7 E8 E0 04
+4368:D0 E0 CA 30 37 BD CE 44
+4370:20 B0 44 80 F5 A9 04 D0
+4378:02 A9 02 8D 67 43 20 B7
+4380:44 A0 00 B1 FE AA C8 B1
+4388:FE A8 80 B6 20 B7 44 A0
+4390:00 B1 FE 10 0A 20 B0 44
+4398:C8 D0 F6 E6 FF 80 F2 09
+43A0:80 20 B0 44 EE AD 43 D0
+43A8:03 EE AE 43 AD DE C0 F0
+43B0:12 30 EE A2 0F CA 30 EC
+43B8:DD D6 44 D0 F8 8A 0A AA
+43C0:7C E5 44 60 A9 05 D0 06
+43C8:A9 03 D0 02 A9 02 8D 1F
+43D0:44 20 B7 44 8E D4 44 8C
+43D8:D5 44 9C CE 44 9C CF 44
+43E0:9C D0 44 A2 10 F8 0E D4
+43E8:44 2E D5 44 A0 FD B9 D1
+43F0:43 79 D1 43 99 D1 43 C8
+43F8:D0 F4 CA D0 E9 D8 A2 05
+4400:88 B9 D1 43 4A 4A 4A 4A
+4408:18 69 B0 9D CE 44 CA B9
+4410:D1 43 29 0F 18 69 B0 9D
+4418:CE 44 88 CA 10 E3 A2 00
+4420:4C 6A 43 A9 31 D0 02 A9
+4428:B1 8D 39 44 20 B7 44 A0
+4430:08 8A 0A AA A9 B0 90 02
+4438:A9 B1 20 B0 44 88 D0 F1
+4440:4C A4 43 20 B7 44 8A 10
+4448:0A A9 AD 20 B0 44 8A 49
+4450:FF AA E8 A0 00 A9 03 8D
+4458:1F 44 4C D4 43 A9 06 D0
+4460:02 A9 03 8D 84 44 20 B7
+4468:44 A2 00 A0 03 A5 FE 29
+4470:07 18 69 B0 9D CE 44 46
+4478:FF 66 FE 88 D0 F9 E8 E0
+4480:06 D0 EA A2 06 4C 6A 43
+4488:20 B7 44 A0 00 B1 FE F0
+4490:AF 20 B0 44 C8 D0 F6 E6
+4498:FF 80 F2 20 B7 44 A0 00
+44A0:B1 FE F0 9C AA C8 B1 FE
+44A8:20 B0 44 CA D0 F7 F0 90
+44B0:8D DE C0 EE B1 44 60 20
+44B8:BB 44 AA A0 00 B9 DE C0
+44C0:EE BC 44 D0 03 EE BF 44
+44C8:A8 86 FE 84 FF 60 00 00
+44D0:00 00 00 00 00 00 3F 25
+44D8:62 75 64 23 78 24 26 40
+44E0:4F 6F 70 73 61 23 44 27
+44E8:44 43 44 C4 43 C8 43 CC
+44F0:43 22 43 3A 43 75 43 79
+44F8:43 5D 44 61 44 9B 44 88
+4500:44 8C 43
 
 */
 
@@ -975,21 +970,12 @@ __PRINTM
 .endif
 .if ENABLE_HEX
         _nHexWidth   = HexWidth  +1
-
-    ; Moved here so NextArg can reach GetFormat
-    .if USE_HEX_4
-DEBUG .sprintf( "PrintHex4() @ %X", * )
-        PrintHex4:
-                LDA #4
-                BNE _PrintHex
-    .endif
 .endif
 
 ; Entry Point
 ; ======================================================================
 ; printm( format, args, ... )
 ; ======================================================================
-
 PrintM
         STX _pArg+0
         STY _pArg+1
@@ -1006,6 +992,14 @@ NextArg
 ; x Hex 4 Byte
 ; ======================================================================
 .if ENABLE_HEX
+
+    .if USE_HEX_4
+DEBUG .sprintf( "PrintHex4() @ %X", * )
+        PrintHex4:
+                LDA #4
+                BNE _PrintHex
+    .endif
+
     .if USE_HEX_2
 DEBUG .sprintf( "PrintHex2() @ %X", * )
         PrintHex2:
@@ -1032,26 +1026,14 @@ DEBUG .sprintf( "PrintHex2() @ %X", * )
         @Hex2Asc:
                 ADC #'0' + $80  ; inverse=remove #$80
                 STA _bcd, X     ; NOTE: Digits are reversed!
-.if 0
-                LDY #3
+
+                LDY #4
         @HexShr:
                 LSR _val+1      ; 16-bit SHR nibble
                 ROR _val+0
                 DEY
                 BNE @HexShr
-.else
-                LSR _val+1      ; 16-bit SHR nibble
-                ROR _val+0
 
-                LSR _val+1
-                ROR _val+0
-
-                LSR _val+1
-                ROR _val+0
-
-                LSR _val+1
-                ROR _val+0
-.endif
                 INX
         HexWidth:
                 CPX #4          ; _nHexWidth NOTE: self-modifying!
@@ -1075,6 +1057,7 @@ PrintReverseBCD
 ; & Ptr 4 Byte
 ; ======================================================================
 .if ENABLE_PTR
+
     .if USE_PTR_4
 DEBUG .sprintf( "PrintPtr4() @ %X", * )
         PrintPtr4:
@@ -1216,47 +1199,39 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
                 SED             ; "Double Dabble"
         _Dec2BCD:               ; https://en.wikipedia.org/wiki/Double_dabble
                 ASL _val+0
-                ROl _val+1
+                ROL _val+1
 
-                LDY #$FC
+                LDY #$FD
         @DoubleDabble:
-                LDA _bcd-$FC,Y
-                ADC _bcd-$FC,Y
-                STA _bcd-$FC,Y
+                LDA _bcd-$FD,Y
+                ADC _bcd-$FD,Y
+                STA _bcd-$FD,Y
                 INY
                 BNE @DoubleDabble
-
-;                LDA _bcd+1
-;                ADC _bcd+1
-;                STA _bcd+1
-;
-;                LDA _bcd+2
-;                ADC _bcd+2
-;                STA _bcd+2
 
                 DEX
                 BNE _Dec2BCD
                 CLD
 
         BCD2Char:
-                LDX #2
-                LDY #5
-        _BCD2Char:          ; NOTE: Digits are reversed!
-                LDA _bcd,X  ; __c???    _b_?XX  a_YYXX
+                LDX #5          ; was Y
+                DEY             ; $FF - $FD = 2
+        _BCD2Char:              ; NOTE: Digits are reversed!
+                LDA _bcd-$FD,Y  ; __c???   _b_?XX   a_YYXX
                 LSR
                 LSR
                 LSR
                 LSR
                 CLC
                 ADC #'0'+$80
-                STA _bcd,Y  ; __c??X    _b_YXX  aZYYXX
-                DEY
+                STA _bcd,X      ; __c??X   _b_YXX   aZYYXX
+                DEX             ; was Y
 
-                LDA _bcd,X  ; __c??X    _b_YXX  aZYYXX
+                LDA _bcd-$FD,Y  ; __c??X   _b_YXX   aZYYXX
                 AND #$F
                 CLC
                 ADC #'0'+$80
-                STA _bcd,Y  ; __c?XX    _bYYXX  ZZYYXX
+                STA _bcd,X      ; __c?XX   _bYYXX   ZZYYXX
                 DEY
                 DEX
                 BPL _BCD2Char
