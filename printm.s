@@ -1,7 +1,11 @@
 ; ca65
 .feature c_comments
+.linecont +
+.feature labels_without_colons
+.feature leading_dot_in_identifiers
+.PC02 ; 65C02
 
-/* Version 23
+/* Version 24
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -102,7 +106,7 @@ With all 15 features turned OFF the core routines use $62 = 98 bytes.
 
 With the common setting (default):
     BinAsc, Dec2, Dec3, Dec5, Hex2, Hex4, and StrA
-the size is $162 = 354 bytes
+the size is $15E = 350 bytes
 
 To toggle features on / off change USE_* to 0 or 1:
 
@@ -115,22 +119,22 @@ To toggle features on / off change USE_* to 0 or 1:
 
 ;            core _PrintDec routine.
 ;
-;           Feature  Size Bytes Total            Notes
-USE_BIN_ASC     = 1 ; $84 132 \
-USE_BIN_INV     = 1 ; $86 134 /  $8B (139 bytes)
-USE_DEC_2       = 1 ; $D7 215 \
-USE_DEC_3       = 1 ; $D9 217   $106 (262 bytes)
-USE_DEC_5       = 1 ; $D9 217
-USE_DEC_BYTE    = 1 ; $F3 243 /                  sets ENABLE_DEC
-USE_HEX_2       = 1 ; $AF 175 \
-USE_HEX_4       = 1 ; $B1 177 /  $B6 (182 bytes)
-USE_OCT_3       = 1 ; $9C 156 \
-USE_OCT_6       = 1 ; $9E 158 /  $A3 (163 bytes)
-USE_PTR_2       = 1 ; $C0 192 \                  sets ENABLE_HEX
-USE_PTR_4       = 1 ; $C2 194 /  $C7 (199 bytes)
-USE_STR_A       = 1 ; $7A 122 \
-USE_STR_C       = 1 ; $7A 122    $A8 (168 bytes)
-USE_STR_PASCAL  = 1 ; $7C 124 /
+;           Feature  Size Bytes  Total           Notes
+USE_BIN_ASC     = 1 ; $7E 126 \. $85 (134 bytes)
+USE_BIN_INV     = 0 ; $80 128 /
+USE_DEC_2       = 1 ; $C7 199 \
+USE_DEC_3       = 1 ; $C9 201  \.$F2 (242 bytes)
+USE_DEC_5       = 1 ; $C9 201  /
+USE_DEC_BYTE    = 0 ; $DF 223 /                  sets ENABLE_DEC
+USE_HEX_2       = 1 ; $A0 160 \. $A7 (167 bytes)
+USE_HEX_4       = 1 ; $A2 162 /
+USE_OCT_3       = 0 ; $97 151 \. $9E (158 bytes)
+USE_OCT_6       = 0 ; $99 153 /
+USE_PTR_2       = 0 ; $B1 177 \. $B8 (184 bytes) sets ENABLE_HEX
+USE_PTR_4       = 0 ; $B3 179 /
+USE_STR_A       = 1 ; $78 120 \
+USE_STR_C       = 0 ; $78 120  > $A6 (166 bytes)
+USE_STR_PASCAL  = 0 ; $7A 122 /
 
 /*
 
@@ -146,30 +150,30 @@ Demo + Library text dump:
 4038:9C EF 41 8D 0A 42 8D 0E
 4040:42 20 B3 41 8D F0 41 9C
 4048:F1 41 A0 00 20 C3 41 A2
-4050:E4 A0 41 20 26 43 A0 01
+4050:E4 A0 41 20 22 43 A0 01
 4058:20 C3 41 A2 08 A0 42 20
-4060:26 43 A0 02 20 C3 41 A2
-4068:0C A0 42 20 26 43 A0 03
+4060:22 43 A0 02 20 C3 41 A2
+4068:0C A0 42 20 22 43 A0 03
 4070:20 C3 41 A2 37 A0 42 20
-4078:26 43 A0 04 20 C3 41 A2
-4080:3B A0 42 20 26 43 A0 05
+4078:22 43 A0 04 20 C3 41 A2
+4080:3B A0 42 20 22 43 A0 05
 4088:20 C3 41 A2 3F A0 42 20
-4090:26 43 A0 06 20 C3 41 A2
-4098:43 A0 42 20 26 43 A0 07
+4090:22 43 A0 06 20 C3 41 A2
+4098:43 A0 42 20 22 43 A0 07
 40A0:20 C3 41 A2 73 A0 42 20
-40A8:26 43 A0 08 20 C3 41 A2
-40B0:77 A0 42 20 26 43 A0 09
+40A8:22 43 A0 08 20 C3 41 A2
+40B0:77 A0 42 20 22 43 A0 09
 40B8:20 C3 41 A2 7B A0 42 20
-40C0:26 43 A0 0A 20 C3 41 A2
-40C8:81 A0 42 20 26 43 A0 0B
+40C0:22 43 A0 0A 20 C3 41 A2
+40C8:81 A0 42 20 22 43 A0 0B
 40D0:20 C3 41 A2 97 A0 42 20
-40D8:26 43 A0 0C 20 C3 41 A2
-40E0:9B A0 42 20 26 43 A0 0D
+40D8:22 43 A0 0C 20 C3 41 A2
+40E0:9B A0 42 20 22 43 A0 0D
 40E8:20 C3 41 A2 EB A0 42 20
-40F0:26 43 A0 0E 20 C3 41 A2
-40F8:E5 A0 42 20 26 43 A0 0F
+40F0:22 43 A0 0E 20 C3 41 A2
+40F8:E5 A0 42 20 22 43 A0 0F
 4100:20 C3 41 A2 EF A0 42 20
-4108:26 43 A9 11 20 5B FB A2
+4108:22 43 A9 11 20 5B FB A2
 4110:F3 A0 42 20 A2 41 AD 21
 4118:43 85 FF 20 DA FD AD 20
 4120:43 85 FE 20 DA FD 20 BE
@@ -236,10 +240,10 @@ Demo + Library text dump:
 4308:F4 E5 F3 8D A0 A0 A0 A0
 4310:AE E6 E5 E1 F4 F5 F2 E5
 4318:F3 A0 BD A0 A4 A0 A0 00
-4320:E1 01 A9 04 D0 16 8E BE
-4328:44 8C BF 44 9C BC 44 20
-4330:B7 44 8E AD 43 8C AE 43
-4338:80 72 A9 02 8D 67 43 20
+4320:E1 01 8E BE 44 8C BF 44
+4328:9C BC 44 20 B7 44 8E AD
+4330:43 8C AE 43 80 76 A9 04
+4338:D0 02 A9 02 8D 67 43 20
 4340:B7 44 8E D4 44 8C D5 44
 4348:A2 00 AD D4 44 29 0F C9
 4350:0A 90 02 69 06 69 B0 9D
@@ -294,23 +298,17 @@ Demo + Library text dump:
 44D8:62 75 64 23 78 24 26 40
 44E0:4F 6F 70 73 61 23 44 27
 44E8:44 43 44 C4 43 C8 43 CC
-44F0:43 22 43 3A 43 75 43 79
+44F0:43 36 43 3A 43 75 43 79
 44F8:43 5D 44 61 44 9B 44 88
-4500:44 8C 43
+4500:44 8C 43 
 
 */
 
 
-; more ca65 features
-.linecont +
-.feature labels_without_colons
-.feature leading_dot_in_identifiers
-; 65C02
-.PC02
 
 ; Assemble-time diagnostic information
 .macro DEBUG text
-.if 0
+.if 1
     .out text
 .endif
 .endmacro
@@ -1330,14 +1328,14 @@ DEBUG .sprintf( "PrintOct3() @ %X", * )
                 JSR NxtArgYX    ; X = low byte
 
                 LDX #0
-                LDY #3
-        @_Oct2Asc:
+        @Oct2Asc:
                 LDA _temp
                 AND #7
                 CLC
                 ADC #'0'+$80
                 STA _bcd,x      ; NOTE: Digits are reversed!
 
+                LDY #3
         @OctShr:
                 LSR _temp+1
                 ROR _temp+0
@@ -1346,7 +1344,7 @@ DEBUG .sprintf( "PrintOct3() @ %X", * )
 
                 INX
                 CPX #6
-                BNE @_Oct2Asc
+                BNE @Oct2Asc
         OctWidth:
                 LDX #6      ; _nOctDigits NOTE: self-modifying!
                 JMP PrintReverseBCD
