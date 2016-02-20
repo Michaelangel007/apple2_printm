@@ -5,7 +5,7 @@
 .feature leading_dot_in_identifiers
 .PC02 ; 65C02
 
-/* Version 30
+/* Version 31
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -99,12 +99,12 @@ don't need "every" feature. Seriously, when was the last time
 you _needed_ octal? :-)
 
 printm() has manually been optimized for size. In gcc parlance, `-Os`.
-With everything enabled printm() takes up $1DB = 475 bytes
+With everything enabled printm() takes up $1CB = 459 bytes
 (Plus 2 bytes in zero page.)
 
 Whoa! I thought you said this was micro!?
 
-With all 15 features turned OFF the core routines use $62 = 98 bytes.
+With all 15 features turned OFF the core routines use $87 = 98 bytes.
 
 With the common setting (default) features:
     BinAsc, Dec2, Dec3, Dec5, Hex2, Hex4, and StrA
@@ -122,19 +122,19 @@ To toggle features on / off change USE_* to 0 or 1:
 ;            core _PrintDec routine.
 ;
 ;           Feature  Size Bytes  Total           Notes
-USE_BIN_ASC     = 1 ; $7E 126 \. $85 (134 bytes)
+USE_BIN_ASC     = 0 ; $7E 126 \. $85 (134 bytes)
 USE_BIN_INV     = 0 ; $7E 126 /
-USE_DEC_2       = 1 ; $C7 199 \
-USE_DEC_3       = 1 ; $C7 199  \.$F0 (240 bytes)
-USE_DEC_5       = 1 ; $C7 199  /
+USE_DEC_2       = 0 ; $C7 199 \
+USE_DEC_3       = 0 ; $C7 199  \.$F0 (240 bytes)
+USE_DEC_5       = 0 ; $C7 199  /
 USE_DEC_BYTE    = 0 ; $DF 223 /                  sets ENABLE_DEC
-USE_HEX_2       = 1 ; $A0 160 \. $A6 (166 bytes)
-USE_HEX_4       = 1 ; $A0 160 /
+USE_HEX_2       = 0 ; $99 153 \. $9E (158 bytes)
+USE_HEX_4       = 0 ; $99 153 /
 USE_OCT_3       = 0 ; $97 151 \. $9D (157 bytes)
 USE_OCT_6       = 0 ; $97 151 /
 USE_PTR_2       = 0 ; $B1 177 \. $B7 (183 bytes) sets ENABLE_HEX
 USE_PTR_4       = 0 ; $B1 177 /
-USE_STR_A       = 1 ; $78 120 \
+USE_STR_A       = 0 ; $78 120 \
 USE_STR_C       = 0 ; $78 120  > $A6 (166 bytes)
 USE_STR_PASCAL  = 0 ; $7A 122 /
 
@@ -811,6 +811,7 @@ TEXT_DEC_2      PRINTM "Dec2: %#", 0
 TEXT_DEC_3      PRINTM "Dec3: %d", 0
 TEXT_DEC_5      PRINTM "Dec5: %u", 0
 TEXT_DEC_BYTE   PRINTM "Byte=%b %b %b %b %b", 0
+;TEXT_DEC_BYTE   PRINTM "%b",0
 
 ARGS_DEC_2
     dw TEXT_DEC_2
@@ -952,9 +953,9 @@ __PRINTM
 .if ENABLE_OCT
         _nOctWidth   = OctWidth  +1
 .endif
-.if ENABLE_HEX
-        _nHexWidth   = HexWidth  +1
-.endif
+;.if ENABLE_HEX
+;        _nHexWidth   = HexWidth  +1
+;.endif
 
 ; Entry Point
 ; ======================================================================
@@ -980,23 +981,33 @@ NextArg
     .if USE_HEX_4
 DEBUG .sprintf( "PrintHex4() @ %X", * )
         PrintHex4:
-                LDA #4
+                SEC
         .if USE_HEX_2
-                ;BNE _PrintHex
-                db $2C          ; BIT $abs skip next instruction
+                db $A9          ; LDA #imm skip next 1-byte instruction
         .endif
     .endif
 
     .if USE_HEX_2
 DEBUG .sprintf( "PrintHex2() @ %X", * )
         PrintHex2:
-                LDA #2
+                CLC
     .endif
 
+        ; Print 16-bit Y,X in hex
         _PrintHex:
-                STA _nHexWidth
-                JSR NxtArgYX
+                JSR NxtArgYX    ; A=Y= high byte
+                BCC _PrintHexX
 
+        PrintHexAX:
+                ;TYA - optimization from NxtArgYX above
+                JSR PrintHexByte
+        _PrintHexX:
+                TXA
+        PrintHexA:
+                JSR PrintHexByte
+                BRA NextFormat
+
+.if 0
         ; Print 16-bit Y,X in hex
         ; Uses _nHexWidth to limit output width
         PrintHexYX:
@@ -1026,18 +1037,7 @@ DEBUG .sprintf( "PrintHex2() @ %X", * )
                 CPX #4          ; _nHexWidth NOTE: self-modifying!
                 BNE _HexDigit
                                 ; Intentional fall into reverse BCD
-.endif
-
-; On Entry: X number of chars to print in buffer _bcd
-; ======================================================================
-.if ENABLE_HEX || ENABLE_DEC || ENABLE_OCT
-PrintReverseBCD
-        DEX
-        BMI NextFormat
-        LDA _bcd, X
-        JSR PutChar
-        BRA PrintReverseBCD
-
+.endif ; OLD_PRINT_HEX
 .endif
 
 ; @ Ptr 2 Byte
@@ -1048,31 +1048,28 @@ PrintReverseBCD
     .if USE_PTR_4
 DEBUG .sprintf( "PrintPtr4() @ %X", * )
         PrintPtr4:
-                LDA #4
+                SEC
         .if USE_PTR_2
-                ;BNE _PrintPtr
-                db $2C          ; BIT $abs skip next instruction
+                db $A9          ; LDA #imm skip next 1-byte instruction
         .endif
     .endif
 
     .if USE_PTR_2
 DEBUG .sprintf( "PrintPtr2() @ %X", * )
         PrintPtr2:
-                LDA #2
+                CLC
     .endif
 
         _PrintPtr:
-                STA _nHexWidth
                 JSR NxtArgToTemp
 
                 LDY #$0
                 LDA (_temp),Y
+                BCC PrintHexA
                 TAX
                 INY
                 LDA (_temp),Y
-                TAY
-
-                BRA PrintHexYX  ; needs XYtoVal setup
+                BRA PrintHexAX  ; needs XYtoVal setup
 .endif  ; ENABLE_PTR
 
 
@@ -1151,12 +1148,14 @@ _Done
 ; u Dec 2 Byte (max 5 digits)
 ; ======================================================================
 .if ENABLE_DEC
+
+NEW_PRINT_DEC = 1 ; TODO: FIXME: DEBUG:
+
     .if USE_DEC_5
 DEBUG .sprintf( "PrintDec5() @ %X", * )
         PrintDec5:
-                LDA #5
+                LDA #5/2        ; offset into _bcd buffer
         .if USE_DEC_2 || USE_DEC_3
-                ;BNE _PrintDec   ; always
                 db $2C          ; BIT $abs skip next instruction
         .endif
     .endif
@@ -1164,9 +1163,8 @@ DEBUG .sprintf( "PrintDec5() @ %X", * )
     .if USE_DEC_3
 DEBUG .sprintf( "PrintDec3() @ %X", * )
         PrintDec3:
-                LDA #3
+                LDA #3/2        ; offset into bcd buffer
         .if USE_DEC_2
-                ;BNE _PrintDec   ; always
                 db $2C          ; BIT $abs skip next instruction
         .endif
     .endif
@@ -1174,7 +1172,7 @@ DEBUG .sprintf( "PrintDec3() @ %X", * )
     .if USE_DEC_2
 DEBUG .sprintf( "PrintDec2() @ %X", * )
         PrintDec2:
-                LDA #2          ; 2 digits
+                LDA #0          ; special: print 2 digits
     .endif
 
     ; no .if USE_DEC_BYTE here because ENABLE_DEC already covers that
@@ -1209,50 +1207,50 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
                 BNE @Dec2BCD
                 CLD
 
-NEW_PRINT_DEC = 0 ; TODO: FIXME: DEBUG:
 .if NEW_PRINT_DEC
         DecWidth:
-.endif
-                LDX #5          ; was Y
-                DEY             ; $FF - $FD = 2
+                LDY #3          ; was Y, default to 6 digits
+                BEQ @EvenBCD
+        ; Print low nibble, skip high nibble
+        @OddBCD:                ; X = num digits to print
+                LDA _bcd,Y      ; __c???   _b_?XX   a_YYXX
+                JSR HexA
+                JSR PutChar
+                DEY 
+        @EvenBCD:
+                LDA _bcd,Y      ; __c???   _b_?XX   a_YYXX
+                JSR PrintHexByte
+                DEY
+                BPL @EvenBCD
+                BRA NextFormat  ; always
+;JMP NextFormat
+.else
+                LDX #5          ; was Y, default to 6 digits
         @BCD2Char:              ; NOTE: Digits are reversed!
-                LDA _bcd-$FD,Y  ; __c???   _b_?XX   a_YYXX
+                LDA _bcd,Y      ; __c???   _b_?XX   a_YYXX
                 LSR
                 LSR
                 LSR
                 LSR
                 CLC
                 ADC #'0'+$80
-.if NEW_PRINT_DEC
-                JSR PutChar
-.else
                 STA _bcd,X      ; __c??X   _b_YXX   aZYYXX
-.endif
                 DEX             ; was Y
-.if NEW_PRINT_DEC
-                BMI NextFormat
-.endif
-                LDA _bcd-$FD,Y  ; __c??X   _b_YXX   aZYYXX
+        @BCDBotNib:
+                LDA _bcd,Y      ; __c??X   _b_YXX   aZYYXX
                 AND #$F
                 CLC
                 ADC #'0'+$80
-.if NEW_PRINT_DEC
-                JSR PutChar
-.else
                 STA _bcd,X      ; __c?XX   _bYYXX   ZZYYXX
-.endif
-                DEY
                 DEX
                 BPL @BCD2Char
-
-.if NEW_PRINT_DEC
-                BMI NextFormat  ; always
-.else
         DecWidth:
-                LDX #0      ; _nDecDigits NOTE: self-modifying!
-                JMP PrintReverseBCD
+                LDX #5      ; _nDecDigits NOTE: self-modifying!
 .endif
+
 .endif  ; ENABLE_DEC
+
+
 
 ; ______________________________________________________________________
 
@@ -1318,7 +1316,7 @@ DEBUG .sprintf( "PrintDecB() @ %X", * )
         PrintBytePos:
 
                 LDY #00         ; 00XX
-                LDA #3          ; 3 digits max
+                LDA #3/2        ; 3 digits max
                 STA _nDecWidth
                 JMP PrintDecYX  ; needs XYtoVal setup
     .endif ; USE_DEC_BYTE
@@ -1368,8 +1366,17 @@ DEBUG .sprintf( "PrintOct3() @ %X", * )
                 BNE @Oct2Asc
         OctWidth:
                 LDX #6      ; _nOctDigits NOTE: self-modifying!
-                JMP PrintReverseBCD
-.endif  ; ENABLE_OCT
+
+; On Entry: X number of chars to print in buffer _bcd
+; ======================================================================
+;.if ENABLE_DEC || ENABLE_OCT
+PrintReverseBCD
+        DEX
+        BMI _JumpNextFormat
+        LDA _bcd, X
+        JSR PutChar
+        BRA PrintReverseBCD
+.endif
 
 ; ______________________________________________________________________
 
@@ -1418,6 +1425,37 @@ DEBUG .sprintf( "PrintStrP() @ %X", * )
 ; ----------------------------------------------------------------------
 ; Utility
 ; ----------------------------------------------------------------------
+
+; Converts A to Hex digits, prints them
+PrintHexByte:
+.out .sprintf( "PrintHexByte @ %X", * )
+                JSR HexA
+                LDA _temp+0
+                JSR PutChar
+PrintHexBotNib:
+                LDA _temp+1
+                JMP PutChar
+; Converts A to Hex digits, stores two chars in _temp+0, _temp+1
+; @return: A will be bottom nibble in ASCII
+HexA:
+                PHA
+                LSR
+                LSR
+                LSR
+                LSR
+                JSR _HexNib
+                STA _temp+0
+                PLA
+_HexNib:
+                AND #$F
+                CMP #$A         ; n < 10 ?
+                BCC @Hex2Asc
+                ADC #6          ; n += 6    $A -> +6 + (C=1) = $11
+@Hex2Asc:
+                ADC #'0' + $80  ; inverse=remove #$80
+                STA _temp+1
+                RTS
+
 
 ; ======================================================================
 ;
@@ -1584,6 +1622,8 @@ MetaFunc
 .endif
 
 __END
+.out .sprintf( "_bcd @ %X", _bcd )
+.out .sprintf( "printm size: %X (%d bytes)", __LIB_SIZE     , __LIB_SIZE     )
 
 DEBUG .sprintf( "Total  size: %X (%d bytes)", __END   -__MAIN, __END   -__MAIN)
 DEBUG .sprintf( "Demo   size: %X (%d bytes)", __PRINTM-__MAIN, __PRINTM-__MAIN)
