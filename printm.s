@@ -5,7 +5,7 @@
 .feature leading_dot_in_identifiers
 .PC02 ; 65C02
 
-/* Version 28
+/* Version 29
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -92,11 +92,13 @@ Here is a *modular* _micro_ replacement: printm()
     s Str - C string, zero terminated
     p Str - Pascal string, first character is string length
 
+
 Each option can individually be enabled / disabled
 to control the memory footprint since you probably
 don't need "every" feature. Seriously, when was the last time
 you _needed_ octal? :-)
 
+printm() has manually been optimized for size. In gcc parlance, `-Os`.
 With everything enabled printm() takes up $1DC = 476 bytes
 (Plus 2 bytes in zero page.)
 
@@ -422,6 +424,7 @@ DEBUG .sprintf( "Features enabled: %d", NumMeta )
         BASH    = $29
         GBASL   = $26   ; HGR pointer to cursor
         GBASH   = $27
+        HGRPAGE = $E6   ; used by HPOSN
         HPOSN   = $F411 ; A=row, X=col.lo,Y=col.hi, sets GBASL, GBASH
         BASCALC = $FBC1 ; A=row, sets BASL, BASH
         HOME    = $FC58
@@ -465,6 +468,9 @@ printm().size = $0209 000521 bytes
 
 ; Demo printm
         JSR HOME
+
+        LDA #$20
+        STA HGRPAGE
 
         LDA #$D5
         STA $2000
