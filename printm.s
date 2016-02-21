@@ -99,7 +99,7 @@ don't need "every" feature. Seriously, when was the last time
 you _needed_ octal? :-)
 
 printm() has manually been optimized for size. In gcc parlance, `-Os`.
-With everything enabled printm() takes up $1C2 = 450 bytes
+With everything enabled printm() takes up $1BC = 444 bytes
 (Plus 2 bytes in zero page.)
 
 Whoa! I thought you said this was micro!?
@@ -149,11 +149,11 @@ Believe me it is.  Here are some of the optimization tricks used:
                 BNE @DoubleDabble
         ; When Y=0, we'll be at _bcd[3]
 
-With all 15 features turned OFF the core routines use $60 = 96 bytes.
+With all 15 features turned OFF the core routines use $49 = 73 bytes.
 
 With the common setting (default) features:
     BinAsc, Dec2, Dec3, Dec5, Hex2, Hex4, and StrA
-the size is $12A = 298 bytes
+the size is $11B = 283 bytes
 
 To toggle features on / off change USE_* to 0 or 1:
 
@@ -167,21 +167,21 @@ To toggle features on / off change USE_* to 0 or 1:
 ;            core _PrintDec routine.
 ;
 ;           Feature  Size Bytes  Total           Notes
-USE_BIN_ASC     = 1 ; $7C 124 \. $82 (130 bytes)
-USE_BIN_INV     = 1 ; $7C 124 /
-USE_DEC_2       = 1 ; $D3 211 \
-USE_DEC_3       = 1 ; $D3 213  \.$FE (254 bytes)
-USE_DEC_5       = 1 ; $D5 213  /
-USE_DEC_BYTE    = 1 ; $EB 235 /                  sets ENABLE_DEC
-USE_HEX_2       = 1 ; $99 153 \. $9E (158 bytes)
-USE_HEX_4       = 1 ; $99 153 /
-USE_OCT_3       = 1 ; $92 146 \. $98 (152 bytes)
-USE_OCT_6       = 1 ; $92 146 /
-USE_PTR_2       = 1 ; $A8 168 \. $AD (173 bytes) sets ENABLE_HEX
-USE_PTR_4       = 1 ; $A8 168 /
-USE_STR_A       = 1 ; $78 120 \
-USE_STR_C       = 1 ; $78 120  > $A6 (166 bytes)
-USE_STR_PASCAL  = 1 ; $7A 122 /
+USE_BIN_ASC     = 1 ; $77 119 \. $7D (125 bytes)
+USE_BIN_INV     = 0 ; $77 119 /
+USE_DEC_2       = 1 ; $C6 198 \
+USE_DEC_3       = 1 ; $C6 198  \.$F1 (241 bytes)
+USE_DEC_5       = 1 ; $C6 198  /
+USE_DEC_BYTE    = 0 ; $E0 224 /                  sets ENABLE_DEC
+USE_HEX_2       = 1 ; $92 146 \. $97 (151 bytes)
+USE_HEX_4       = 1 ; $92 146 /
+USE_OCT_3       = 0 ; $8B 139 \. $91 (145 bytes)
+USE_OCT_6       = 0 ; $8B 139 /
+USE_PTR_2       = 0 ; $A1 161 \. $A6 (166 bytes) sets ENABLE_HEX
+USE_PTR_4       = 0 ; $A1 161 /
+USE_STR_A       = 1 ; $71 113 \
+USE_STR_C       = 0 ; $71 113  > $9F (159 bytes)
+USE_STR_PASCAL  = 0 ; $74 115 /
 
 /*
 
@@ -189,159 +189,158 @@ Demo (All features) + Library text dump:
 
 4000:20 58 FC A9 20 85 E6 A9
 4008:D5 8D 00 20 A9 AA 8D 01
-4010:20 AD D5 41 A2 00 A0 00
-4018:20 11 F4 18 A5 26 6D D3
-4020:41 85 26 AA A4 27 8E D7
-4028:41 8C D8 41 8E D9 41 8C
-4030:DA 41 AD 00 20 A0 00 91
-4038:26 8D DB 41 9C DC 41 8D
-4040:F7 41 8D FB 41 20 A0 41
-4048:8D DD 41 9C DE 41 A0 00
-4050:20 B0 41 A2 D1 A0 41 20
-4058:0F 43 A0 01 20 B0 41 A2
-4060:F5 A0 41 20 0F 43 A0 02
-4068:20 B0 41 A2 F9 A0 41 20
-4070:0F 43 A0 03 20 B0 41 A2
-4078:24 A0 42 20 0F 43 A0 04
-4080:20 B0 41 A2 28 A0 42 20
-4088:0F 43 A0 05 20 B0 41 A2
-4090:2C A0 42 20 0F 43 A0 06
-4098:20 B0 41 A2 30 A0 42 20
-40A0:0F 43 A0 07 20 B0 41 A2
-40A8:60 A0 42 20 0F 43 A0 08
-40B0:20 B0 41 A2 64 A0 42 20
-40B8:0F 43 A0 09 20 B0 41 A2
-40C0:68 A0 42 20 0F 43 A0 0A
-40C8:20 B0 41 A2 6E A0 42 20
-40D0:0F 43 A0 0B 20 B0 41 A2
-40D8:84 A0 42 20 0F 43 A0 0C
-40E0:20 B0 41 A2 88 A0 42 20
-40E8:0F 43 A0 0D 20 B0 41 A2
-40F0:D8 A0 42 20 0F 43 A0 0E
-40F8:20 B0 41 A2 D2 A0 42 20
-4100:0F 43 A0 0F 20 B0 41 A2
-4108:DC A0 42 20 0F 43 A9 11
-4110:20 5B FB A2 E0 A0 42 20
-4118:8F 41 AD 0E 43 85 FF 20
-4120:DA FD AD 0D 43 85 FE 20
-4128:DA FD 20 AB 41 20 4D 41
-4130:A2 F2 A0 42 20 8F 41 AE
-4138:85 43 86 FE 64 FF 8A 20
-4140:DA FD 20 AB 41 20 4D 41
-4148:A9 8D 4C ED FD 9C A1 44
-4150:9C A2 44 9C A3 44 A2 10
-4158:F8 06 FE 26 FF A0 FD B9
-4160:A4 43 79 A4 43 99 A4 43
-4168:C8 D0 F4 CA D0 EB D8 A2
-4170:05 88 B9 A4 43 4A 4A 4A
-4178:4A 18 69 B0 20 ED FD CA
-4180:B9 A4 43 29 0F 18 69 B0
-4188:20 ED FD CA 10 E3 60 86
-4190:FC 84 FD A0 00 B1 FC F0
-4198:06 20 ED FD C8 D0 F6 60
-41A0:A2 08 85 FE 06 FE 6A CA
-41A8:D0 FA 60 A9 A0 4C ED FD
-41B0:98 20 C1 FB A6 28 A4 29
-41B8:8E 9B 44 8C 9C 44 60 D8
-41C0:BD 23 A0 D9 BD 64 A0 A4
-41C8:BD 78 BA 40 A0 25 FE 3F
-41D0:00 BF 41 27 00 BF 00 DE
-41D8:C0 DE C0 1A DA 1A DA C2
-41E0:E9 EE A0 C1 D3 C3 BA A0
-41E8:25 00 C2 E9 EE A0 C9 CE
-41F0:D6 BA A0 3F 00 DF 41 1A
-41F8:DA EA 41 1A DA C4 E5 E3
-4200:B2 BA A0 23 00 C4 E5 E3
-4208:B3 BA A0 64 00 C4 E5 E3
-4210:B5 BA A0 75 00 C2 F9 F4
-4218:E5 BD 62 A0 62 A0 62 A0
-4220:62 A0 62 00 FD 41 63 00
-4228:05 42 E7 03 0D 42 69 FF
-4230:15 42 80 00 FF 00 00 00
-4238:01 00 7F 00 C8 E5 F8 B2
-4240:BA A0 24 00 C8 E5 F8 B4
-4248:BA A0 78 00 D0 F4 F2 B2
-4250:BA A0 78 BA 40 00 D0 F4
-4258:F2 B4 BA A0 78 BA 26 00
-4260:3C 42 34 12 44 42 34 12
-4268:4C 42 00 20 00 20 56 42
-4270:00 20 00 20 CF E3 F4 B3
-4278:BA A0 6F 00 CF E3 F4 B6
-4280:BA A0 4F 00 74 42 B6 01
-4288:7C 42 DF 32 C8 C5 CC CC
-4290:CF 00 D7 CF D2 CC C4 00
-4298:C8 CF CD 45 0D D0 E1 F3
-42A0:E3 E1 EC A0 CC E5 EE A0
-42A8:B1 B3 C3 A0 A0 A0 A0 A0
-42B0:BA A0 A7 73 A7 AC A7 73
-42B8:A7 00 C1 F0 F0 EC E5 A0
-42C0:BA A0 A7 61 A7 00 D0 E1
-42C8:F3 E3 E1 EC BA A0 A7 70
-42D0:A7 00 AA 42 8C 42 92 42
-42D8:BA 42 98 42 C6 42 9C 42
-42E0:F0 F2 E9 EE F4 ED A8 A9
-42E8:AE F3 E9 FA E5 A0 BD A0
-42F0:A4 00 A0 E2 F9 F4 E5 F3
-42F8:8D A0 A0 A0 A0 AE E6 E5
-4300:E1 F4 F5 F2 E5 F3 A0 BD
-4308:A0 A4 A0 A0 00 C7 01 8E
-4310:2A 43 8C 2B 43 9C 28 43
-4318:20 23 43 8E 7E 43 8C 7F
-4320:43 80 5A 20 27 43 AA A0
-4328:00 B9 DE C0 EE 28 43 D0
-4330:03 EE 2B 43 A8 86 FE 84
-4338:FF 60 38 A9 18 20 23 43
-4340:90 03 20 75 44 8A 20 75
-4348:44 80 2A 38 A9 18 20 23
-4350:43 A0 00 B1 FE 90 EF AA
-4358:C8 B1 FE 80 E5 20 23 43
-4360:A0 00 B1 FE 10 0A 20 9A
-4368:44 C8 D0 F6 E6 FF 80 F2
-4370:09 80 20 9A 44 EE 7E 43
-4378:D0 03 EE 7F 43 AD DE C0
-4380:F0 B7 30 EE A2 2D CA CA
-4388:CA 30 EA DD A9 44 D0 F6
-4390:7C AA 44 A9 02 2C A9 01
-4398:2C A9 00 8D CC 43 20 23
-43A0:43 8E A7 44 8C A8 44 9C
-43A8:A1 44 9C A2 44 9C A3 44
-43B0:A2 10 F8 0E A7 44 2E A8
-43B8:44 A0 FD B9 A4 43 79 A4
-43C0:43 99 A4 43 C8 D0 F4 CA
-43C8:D0 E9 D8 A0 03 F0 0A B9
-43D0:A1 44 20 82 44 20 9A 44
-43D8:88 B9 A1 44 20 75 44 88
-43E0:10 F7 80 91 A9 31 2C A9
-43E8:B1 8D F9 43 20 23 43 A0
-43F0:08 8A 0A AA A9 B0 90 02
-43F8:A9 B1 20 9A 44 88 D0 F1
-4400:4C 75 43 20 23 43 8A 10
-4408:0A A9 AD 20 9A 44 8A 49
-4410:FF AA E8 A0 00 A9 01 8D
-4418:CC 43 4C A1 43 A9 06 2C
-4420:A9 03 8D 3F 44 20 23 43
-4428:A2 00 A5 FE 29 07 18 69
-4430:B0 9D A1 44 A0 03 46 FF
-4438:66 FE 88 D0 F9 E8 E0 06
-4440:D0 E8 CA 30 BB BD A1 44
-4448:20 9A 44 80 F5 20 23 43
-4450:A0 00 B1 FE F0 AA 20 9A
-4458:44 C8 D0 F6 E6 FF 80 F2
-4460:20 23 43 A0 00 B1 FE F0
-4468:97 AA C8 B1 FE 20 9A 44
-4470:CA D0 F7 F0 8B 20 82 44
-4478:A5 FE 20 9A 44 A5 FF 4C
-4480:9A 44 48 4A 4A 4A 4A 20
-4488:8D 44 85 FE 68 29 0F C9
-4490:0A 90 02 69 06 69 B0 85
-4498:FF 60 8D DE C0 EE 9B 44
-44A0:60 00 00 00 00 00 00 00
-44A8:00 3F E4 43 25 E7 43 62
-44B0:03 44 75 93 43 64 96 43
-44B8:23 99 43 78 3A 43 24 3C
-44C0:43 26 4B 43 40 4D 43 4F
-44C8:1D 44 6F 20 44 70 60 44
-44D0:73 4D 44 61 5D 43
+4010:20 AD D4 41 A2 00 A0 00
+4018:20 11 F4 18 A5 26 6D D2
+4020:41 85 26 AA A4 27 8E D6
+4028:41 8C D7 41 8E D8 41 8C
+4030:D9 41 AD 00 20 A0 00 91
+4038:26 8D DA 41 9C DB 41 8D
+4040:F6 41 8D FA 41 20 9F 41
+4048:8D DC 41 9C DD 41 A0 00
+4050:20 AF 41 A2 D0 A0 41 20
+4058:0E 43 A0 01 20 AF 41 A2
+4060:F4 A0 41 20 0E 43 A0 02
+4068:20 AF 41 A2 F8 A0 41 20
+4070:0E 43 A0 03 20 AF 41 A2
+4078:23 A0 42 20 0E 43 A0 04
+4080:20 AF 41 A2 27 A0 42 20
+4088:0E 43 A0 05 20 AF 41 A2
+4090:2B A0 42 20 0E 43 A0 06
+4098:20 AF 41 A2 2F A0 42 20
+40A0:0E 43 A0 07 20 AF 41 A2
+40A8:5F A0 42 20 0E 43 A0 08
+40B0:20 AF 41 A2 63 A0 42 20
+40B8:0E 43 A0 09 20 AF 41 A2
+40C0:67 A0 42 20 0E 43 A0 0A
+40C8:20 AF 41 A2 6D A0 42 20
+40D0:0E 43 A0 0B 20 AF 41 A2
+40D8:83 A0 42 20 0E 43 A0 0C
+40E0:20 AF 41 A2 87 A0 42 20
+40E8:0E 43 A0 0D 20 AF 41 A2
+40F0:D7 A0 42 20 0E 43 A0 0E
+40F8:20 AF 41 A2 D1 A0 42 20
+4100:0E 43 A0 0F 20 AF 41 A2
+4108:DB A0 42 20 0E 43 A9 11
+4110:20 5B FB A2 DF A0 42 20
+4118:8E 41 AD 0D 43 85 FF 20
+4120:DA FD AD 0C 43 85 FE 20
+4128:DA FD 20 AA 41 20 4C 41
+4130:A2 F1 A0 42 20 8E 41 A2
+4138:0F 86 FE 64 FF 8A 20 DA
+4140:FD 20 AA 41 20 4C 41 A9
+4148:8D 4C ED FD 9C 95 44 9C
+4150:96 44 9C 97 44 A2 10 F8
+4158:06 FE 26 FF A0 FD B9 98
+4160:43 79 98 43 99 98 43 C8
+4168:D0 F4 CA D0 EB D8 A2 05
+4170:88 B9 98 43 4A 4A 4A 4A
+4178:18 69 B0 20 ED FD CA B9
+4180:98 43 29 0F 18 69 B0 20
+4188:ED FD CA 10 E3 60 86 FC
+4190:84 FD A0 00 B1 FC F0 06
+4198:20 ED FD C8 D0 F6 60 A2
+41A0:08 85 FE 06 FE 6A CA D0
+41A8:FA 60 A9 A0 4C ED FD 98
+41B0:20 C1 FB A6 28 A4 29 8E
+41B8:8F 44 8C 90 44 60 D8 BD
+41C0:23 A0 D9 BD 64 A0 A4 BD
+41C8:78 BA 40 A0 25 FE 3F 00
+41D0:BE 41 27 00 BF 00 DE C0
+41D8:DE C0 1A DA 1A DA C2 E9
+41E0:EE A0 C1 D3 C3 BA A0 25
+41E8:00 C2 E9 EE A0 C9 CE D6
+41F0:BA A0 3F 00 DE 41 1A DA
+41F8:E9 41 1A DA C4 E5 E3 B2
+4200:BA A0 23 00 C4 E5 E3 B3
+4208:BA A0 64 00 C4 E5 E3 B5
+4210:BA A0 75 00 C2 F9 F4 E5
+4218:BD 62 A0 62 A0 62 A0 62
+4220:A0 62 00 FC 41 63 00 04
+4228:42 E7 03 0C 42 69 FF 14
+4230:42 80 00 FF 00 00 00 01
+4238:00 7F 00 C8 E5 F8 B2 BA
+4240:A0 24 00 C8 E5 F8 B4 BA
+4248:A0 78 00 D0 F4 F2 B2 BA
+4250:A0 78 BA 40 00 D0 F4 F2
+4258:B4 BA A0 78 BA 26 00 3B
+4260:42 34 12 43 42 34 12 4B
+4268:42 00 20 00 20 55 42 00
+4270:20 00 20 CF E3 F4 B3 BA
+4278:A0 6F 00 CF E3 F4 B6 BA
+4280:A0 4F 00 73 42 B6 01 7B
+4288:42 DF 32 C8 C5 CC CC CF
+4290:00 D7 CF D2 CC C4 00 C8
+4298:CF CD 45 0D D0 E1 F3 E3
+42A0:E1 EC A0 CC E5 EE A0 B1
+42A8:B3 C3 A0 A0 A0 A0 A0 BA
+42B0:A0 A7 73 A7 AC A7 73 A7
+42B8:00 C1 F0 F0 EC E5 A0 BA
+42C0:A0 A7 61 A7 00 D0 E1 F3
+42C8:E3 E1 EC BA A0 A7 70 A7
+42D0:00 A9 42 8B 42 91 42 B9
+42D8:42 97 42 C5 42 9B 42 F0
+42E0:F2 E9 EE F4 ED A8 A9 AE
+42E8:F3 E9 FA E5 A0 BD A0 A4
+42F0:00 A0 E2 F9 F4 E5 F3 8D
+42F8:A0 A0 A0 A0 AE E6 E5 E1
+4300:F4 F5 F2 E5 F3 A0 BD A0
+4308:A4 A0 A0 00 BC 01 8E 24
+4310:43 8C 25 43 20 1F 43 8E
+4318:78 43 8C 79 43 80 58 20
+4320:23 43 AA AD DE C0 EE 24
+4328:43 D0 03 EE 25 43 A8 86
+4330:FE 84 FF 60 38 A9 18 20
+4338:1F 43 90 03 20 69 44 8A
+4340:20 69 44 80 2A 38 A9 18
+4348:20 1F 43 A0 00 B1 FE 90
+4350:EF AA C8 B1 FE 80 E5 20
+4358:1F 43 A0 00 B1 FE 10 0A
+4360:20 8E 44 C8 D0 F6 E6 FF
+4368:80 F2 09 80 20 8E 44 EE
+4370:78 43 D0 03 EE 79 43 AD
+4378:DE C0 F0 B7 30 EE A2 2D
+4380:CA CA CA 30 EA DD 9D 44
+4388:D0 F6 7C 9E 44 A9 02 2C
+4390:A9 01 2C A9 00 8D BE 43
+4398:20 1F 43 9C 95 44 9C 96
+43A0:44 9C 97 44 A2 10 F8 06
+43A8:FE 26 FF A0 FD B9 98 43
+43B0:79 98 43 99 98 43 C8 D0
+43B8:F4 CA D0 EB D8 A0 03 F0
+43C0:0A B9 95 44 20 76 44 20
+43C8:8E 44 88 B9 95 44 20 69
+43D0:44 88 10 F7 80 99 A9 31
+43D8:2C A9 B1 8D EB 43 20 1F
+43E0:43 A0 08 8A 0A AA A9 B0
+43E8:90 02 A9 B1 20 8E 44 88
+43F0:D0 F1 4C 6F 43 20 1F 43
+43F8:8A 10 0A A9 AD 20 8E 44
+4400:8A 49 FF AA E8 86 FE 64
+4408:FF A9 01 8D BE 43 4C 9B
+4410:43 A9 06 2C A9 03 8D 33
+4418:44 20 1F 43 A2 00 A5 FE
+4420:29 07 18 69 B0 9D 95 44
+4428:A0 03 46 FF 66 FE 88 D0
+4430:F9 E8 E0 06 D0 E8 CA 30
+4438:B9 BD 95 44 20 8E 44 80
+4440:F5 20 1F 43 A0 00 B1 FE
+4448:F0 A8 20 8E 44 C8 D0 F6
+4450:E6 FF 80 F2 20 1F 43 A0
+4458:00 B1 FE F0 95 AA C8 B1
+4460:FE 20 8E 44 CA D0 F7 F0
+4468:89 20 76 44 A5 FE 20 8E
+4470:44 A5 FF 4C 8E 44 48 4A
+4478:4A 4A 4A 20 81 44 85 FE
+4480:68 29 0F C9 0A 90 02 69
+4488:06 69 B0 85 FF 60 8D DE
+4490:C0 EE 8F 44 60 00 00 00
+4498:00 00 00 00 00 3F D6 43
+44A0:25 D9 43 62 F5 43 75 8D
+44A8:43 64 90 43 23 93 43 78
+44B0:34 43 24 36 43 26 45 43
+44B8:40 47 43 4F 11 44 6F 14
+44C0:44 70 54 44 73 41 44 61
+44C8:57 43
 
 */
 
@@ -721,7 +720,7 @@ DEBUG "____:StrP"
         LDY #>PRINTM_CMDS
         JSR PrintStringZ
 
-        LDX GetNumFeatures+1
+        LDX #NumMeta
         STX demotmp+0
         STZ demotmp+1
         TXA
@@ -1010,6 +1009,7 @@ FirstArg
 
 ; ======================================================================
 ; @return next arg as 16-bit arg value in Y,X
+
 NxtArgToTemp
 NxtArgYX
         JSR NxtArgByte
@@ -1018,7 +1018,7 @@ NxtArgYX
 ; @return _Arg[ _Num ]
 NxtArgByte
         LDA $C0DE       ; _pArg NOTE: self-modifying!
-        INC _pArg       ;
+        INC _pArg+0     ;
         BNE @_SamePage
         INC _pArg+1     ;
 @_SamePage
@@ -1070,38 +1070,6 @@ DEBUG .sprintf( "PrintHex2() @ %X", * )
                 JSR PrintHexByte
                 BRA NextFormat
 
-.if 0
-        ; Print 16-bit Y,X in hex
-        ; Uses _nHexWidth to limit output width
-        PrintHexYX:
-                STX _val+0      ; may be tempting to move this to NxtArgYX
-                STY _val+1      ; as XYtoVal but others call us
-
-                LDX #0
-        _HexDigit:
-                LDA _val+0
-                AND #$F
-                CMP #$A         ; n < 10 ?
-                BCC @Hex2Asc
-                ADC #6          ; n += 6    $A -> +6 + (C=1) = $11
-        @Hex2Asc:
-                ADC #'0' + $80  ; inverse=remove #$80
-                STA _bcd, X     ; NOTE: Digits are reversed!
-
-                LDY #4
-        @HexShr:
-                LSR _val+1      ; 16-bit SHR nibble
-                ROR _val+0
-                DEY
-                BNE @HexShr
-
-                INX
-        HexWidth:
-                CPX #4          ; _nHexWidth NOTE: self-modifying!
-                BNE _HexDigit
-.endif ; OLD_PRINT_HEX
-.endif
-
 ; @ Ptr 2 Byte
 ; & Ptr 4 Byte
 ; ======================================================================
@@ -1133,6 +1101,7 @@ DEBUG .sprintf( "PrintPtr2() @ %X", * )
                 LDA (_temp),Y
                 BRA PrintHexAX  ; needs XYtoVal setup
 .endif  ; ENABLE_PTR
+.endif  ; ENABLE_HEX
 
 
 ; a String (APPLE text, last byte ASCII)
@@ -1189,6 +1158,8 @@ GetNumFeatures
         .out "INFO: No meta commands, defaulting to text"
         BRA ForceAPPLE
 .endif
+
+.if NumMeta
 
 FindMeta
         DEX
@@ -1264,13 +1235,13 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
         DecWidth:
                 LDY #3          ; default to 6 digits
                 BEQ @EvenBCD    ; special case 0 -> only 2 digits
-                                ; otherwise have odd digits, 
+                                ; otherwise have odd digits,
                                 ; Print low nibble, skip high nibble
         @OddBCD:                ; Y = num digits/2 to print
                 LDA _bcd,Y      ; __c???   _b_?XX   a_YYXX
                 JSR HexA
                 JSR PutChar
-                DEY 
+                DEY
         @EvenBCD:
                 LDA _bcd,Y      ; __c???   _b_?XX   a_YYXX
                 JSR PrintHexByte
@@ -1403,7 +1374,7 @@ PrintReverseBCD
         LDA _bcd, X
         JSR PutChar
         BRA PrintReverseBCD
-.endif
+.endif  ; ENABLE_OCT
 
 ; ______________________________________________________________________
 
@@ -1483,7 +1454,9 @@ _HexNib:
                 ADC #'0' + $80  ; inverse=remove #$80
                 STA _temp+1
                 RTS
-.endif
+.endif ; ENABLE_HEX || ENABLE_DEC
+
+.endif ; NumMeta
 
 ; ======================================================================
 ;
@@ -1500,6 +1473,8 @@ PutChar
 ; ======================================================================
 
 _bcd    ds  6   ; 6 chars for printing dec
+
+.if NumMeta
 _val    dw  0   ; PrintHex2 PrintHex4 temp
 
 MetaTable
@@ -1578,10 +1553,12 @@ MetaTable
     .endif
 .endif
 
+.endif ; NumMeta
+
 __END
 
 DEBUG .sprintf( "_bcd @ %X", _bcd )
-DEBUG .sprintf( "Total  size: %X (%d bytes)", __END   -__MAIN, __END   -__MAIN)
 DEBUG .sprintf( "Demo   size: %X (%d bytes)", __PRINTM-__MAIN, __PRINTM-__MAIN)
+DEBUG .sprintf( "Total  size: %X (%d bytes)", __END   -__MAIN, __END   -__MAIN)
 .out  .sprintf( "printm size: %X (%d bytes)", __LIB_SIZE     , __LIB_SIZE     )
 
