@@ -5,7 +5,7 @@
 .feature leading_dot_in_identifiers
 .PC02 ; 65C02
 
-/* Version 35
+/* Version 37
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -99,7 +99,7 @@ don't need "every" feature. Seriously, when was the last time
 you _needed_ octal? :-)
 
 printm() has manually been optimized for size. In gcc parlance, `-Os`.
-With everything enabled printm() takes up $1BC = 444 bytes
+With everything enabled printm() takes up $1BA = 442 bytes
 (Plus 2 bytes in zero page.)
 
 Whoa! I thought you said this was micro!?
@@ -153,7 +153,7 @@ With all 15 features turned OFF the core routines use $49 = 73 bytes.
 
 With the common setting (default) features:
     BinAsc, Dec2, Dec3, Dec5, Hex2, Hex4, and StrA
-the size is $11B = 283 bytes
+the size is $11A = 282 bytes
 
 To toggle features on / off change USE_* to 0 or 1:
 
@@ -167,21 +167,21 @@ To toggle features on / off change USE_* to 0 or 1:
 ;            core _PrintDec routine.
 ;
 ;           Feature  Size Bytes  Total           Notes
-USE_BIN_ASC     = 1 ; $77 119 \. $7D (125 bytes)
-USE_BIN_INV     = 0 ; $77 119 /
-USE_DEC_2       = 1 ; $C6 198 \
-USE_DEC_3       = 1 ; $C6 198  \.$F1 (241 bytes)
-USE_DEC_5       = 1 ; $C6 198  /
-USE_DEC_BYTE    = 0 ; $E0 224 /                  sets ENABLE_DEC
-USE_HEX_2       = 1 ; $92 146 \. $97 (151 bytes)
-USE_HEX_4       = 1 ; $92 146 /
-USE_OCT_3       = 0 ; $8B 139 \. $91 (145 bytes)
-USE_OCT_6       = 0 ; $8B 139 /
-USE_PTR_2       = 0 ; $A1 161 \. $A6 (166 bytes) sets ENABLE_HEX
-USE_PTR_4       = 0 ; $A1 161 /
-USE_STR_A       = 1 ; $71 113 \
-USE_STR_C       = 0 ; $71 113  > $9F (159 bytes)
-USE_STR_PASCAL  = 0 ; $74 115 /
+USE_BIN_ASC     = 1 ; $78 120 \. $7E (126 bytes)
+USE_BIN_INV     = 0 ; $78 119 /
+USE_DEC_2       = 1 ; $C5 197 \
+USE_DEC_3       = 1 ; $C5 197  \.$EF (239 bytes)
+USE_DEC_5       = 1 ; $C5 197  /
+USE_DEC_BYTE    = 0 ; $DE 222 /                  sets ENABLE_DEC
+USE_HEX_2       = 1 ; $93 147 \. $98 (152 bytes)
+USE_HEX_4       = 1 ; $93 147 /
+USE_OCT_3       = 0 ; $8C 140 \. $92 (146 bytes)
+USE_OCT_6       = 0 ; $8C 140 /
+USE_PTR_2       = 0 ; $A2 162 \. $A7 (167 bytes) sets ENABLE_HEX
+USE_PTR_4       = 0 ; $A2 162 /
+USE_STR_A       = 1 ; $72 114 \
+USE_STR_C       = 0 ; $72 114  > $9F (159 bytes)
+USE_STR_PASCAL  = 0 ; $74 116 /
 
 /*
 
@@ -228,21 +228,21 @@ Demo (All features) + Library text dump:
 4130:A2 F1 A0 42 20 8E 41 A2
 4138:0F 86 FE 64 FF 8A 20 DA
 4140:FD 20 AA 41 20 4C 41 A9
-4148:8D 4C ED FD 9C 95 44 9C
-4150:96 44 9C 97 44 A2 10 F8
-4158:06 FE 26 FF A0 FD B9 98
-4160:43 79 98 43 99 98 43 C8
+4148:8D 4C ED FD 9C 93 44 9C
+4150:94 44 9C 95 44 A2 10 F8
+4158:06 FE 26 FF A0 FD B9 96
+4160:43 79 96 43 99 96 43 C8
 4168:D0 F4 CA D0 EB D8 A2 05
-4170:88 B9 98 43 4A 4A 4A 4A
+4170:88 B9 96 43 4A 4A 4A 4A
 4178:18 69 B0 20 ED FD CA B9
-4180:98 43 29 0F 18 69 B0 20
+4180:96 43 29 0F 18 69 B0 20
 4188:ED FD CA 10 E3 60 86 FC
 4190:84 FD A0 00 B1 FC F0 06
 4198:20 ED FD C8 D0 F6 60 A2
 41A0:08 85 FE 06 FE 6A CA D0
 41A8:FA 60 A9 A0 4C ED FD 98
 41B0:20 C1 FB A6 28 A4 29 8E
-41B8:8F 44 8C 90 44 60 D8 BD
+41B8:8D 44 8C 8E 44 60 D8 BD
 41C0:23 A0 D9 BD 64 A0 A4 BD
 41C8:78 BA 40 A0 25 FE 3F 00
 41D0:BE 41 27 00 BF 00 DE C0
@@ -284,63 +284,62 @@ Demo (All features) + Library text dump:
 42F0:00 A0 E2 F9 F4 E5 F3 8D
 42F8:A0 A0 A0 A0 AE E6 E5 E1
 4300:F4 F5 F2 E5 F3 A0 BD A0
-4308:A4 A0 A0 00 BC 01 8E 24
+4308:A4 A0 A0 00 BA 01 8E 24
 4310:43 8C 25 43 20 1F 43 8E
 4318:78 43 8C 79 43 80 58 20
 4320:23 43 AA AD DE C0 EE 24
 4328:43 D0 03 EE 25 43 A8 86
 4330:FE 84 FF 60 38 A9 18 20
-4338:1F 43 90 03 20 69 44 8A
-4340:20 69 44 80 2A 38 A9 18
+4338:1F 43 90 03 20 67 44 8A
+4340:20 67 44 80 2A 38 A9 18
 4348:20 1F 43 A0 00 B1 FE 90
 4350:EF AA C8 B1 FE 80 E5 20
 4358:1F 43 A0 00 B1 FE 10 0A
-4360:20 8E 44 C8 D0 F6 E6 FF
-4368:80 F2 09 80 20 8E 44 EE
+4360:20 8C 44 C8 D0 F6 E6 FF
+4368:80 F2 09 80 20 8C 44 EE
 4370:78 43 D0 03 EE 79 43 AD
 4378:DE C0 F0 B7 30 EE A2 2D
-4380:CA CA CA 30 EA DD 9D 44
-4388:D0 F6 7C 9E 44 A9 02 2C
+4380:CA CA CA 30 EA DD 9B 44
+4388:D0 F6 7C 9C 44 A9 02 2C
 4390:A9 01 2C A9 00 8D BE 43
-4398:20 1F 43 9C 95 44 9C 96
-43A0:44 9C 97 44 A2 10 F8 06
-43A8:FE 26 FF A0 FD B9 98 43
-43B0:79 98 43 99 98 43 C8 D0
+4398:20 1F 43 9C 93 44 9C 94
+43A0:44 9C 95 44 A2 10 F8 06
+43A8:FE 26 FF A0 FD B9 96 43
+43B0:79 96 43 99 96 43 C8 D0
 43B8:F4 CA D0 EB D8 A0 03 F0
-43C0:0A B9 95 44 20 76 44 20
-43C8:8E 44 88 B9 95 44 20 69
-43D0:44 88 10 F7 80 99 A9 31
-43D8:2C A9 B1 8D EB 43 20 1F
-43E0:43 A0 08 8A 0A AA A9 B0
-43E8:90 02 A9 B1 20 8E 44 88
-43F0:D0 F1 4C 6F 43 20 1F 43
-43F8:8A 10 0A A9 AD 20 8E 44
-4400:8A 49 FF AA E8 86 FE 64
-4408:FF A9 01 8D BE 43 4C 9B
-4410:43 A9 06 2C A9 03 8D 33
-4418:44 20 1F 43 A2 00 A5 FE
-4420:29 07 18 69 B0 9D 95 44
-4428:A0 03 46 FF 66 FE 88 D0
-4430:F9 E8 E0 06 D0 E8 CA 30
-4438:B9 BD 95 44 20 8E 44 80
-4440:F5 20 1F 43 A0 00 B1 FE
-4448:F0 A8 20 8E 44 C8 D0 F6
-4450:E6 FF 80 F2 20 1F 43 A0
-4458:00 B1 FE F0 95 AA C8 B1
-4460:FE 20 8E 44 CA D0 F7 F0
-4468:89 20 76 44 A5 FE 20 8E
-4470:44 A5 FF 4C 8E 44 48 4A
-4478:4A 4A 4A 20 81 44 85 FE
-4480:68 29 0F C9 0A 90 02 69
-4488:06 69 B0 85 FF 60 8D DE
-4490:C0 EE 8F 44 60 00 00 00
-4498:00 00 00 00 00 3F D6 43
-44A0:25 D9 43 62 F5 43 75 8D
-44A8:43 64 90 43 23 93 43 78
-44B0:34 43 24 36 43 26 45 43
-44B8:40 47 43 4F 11 44 6F 14
-44C0:44 70 54 44 73 41 44 61
-44C8:57 43
+43C0:0A B9 93 44 20 74 44 20
+43C8:8C 44 88 B9 93 44 20 67
+43D0:44 88 10 F7 80 99 20 1F
+43D8:43 8A 10 0A A9 AD 20 8C
+43E0:44 8A 49 FF AA E8 86 FE
+43E8:64 FF A9 01 8D BE 43 80
+43F0:AA A9 31 2C A9 B1 8D 06
+43F8:44 20 1F 43 A0 08 8A 0A
+4400:AA A9 B0 90 02 A9 B1 20
+4408:8C 44 88 D0 F1 80 C5 A9
+4410:06 2C A9 03 8D 31 44 20
+4418:1F 43 A2 00 A5 FE 29 07
+4420:18 69 B0 9D 93 44 A0 03
+4428:46 FF 66 FE 88 D0 F9 E8
+4430:E0 06 D0 E8 CA 30 9D BD
+4438:93 44 20 8C 44 80 F5 20
+4440:1F 43 A0 00 B1 FE F0 8C
+4448:20 8C 44 C8 D0 F6 E6 FF
+4450:80 F2 20 1F 43 A0 00 B1
+4458:FE F0 B2 AA C8 B1 FE 20
+4460:8C 44 CA D0 F7 F0 A6 20
+4468:74 44 A5 FE 20 8C 44 A5
+4470:FF 4C 8C 44 48 4A 4A 4A
+4478:4A 20 7F 44 85 FE 68 29
+4480:0F C9 0A 90 02 69 06 69
+4488:B0 85 FF 60 8D DE C0 EE
+4490:8D 44 60 00 00 00 00 00
+4498:00 00 00 3F F1 43 25 F4
+44A0:43 62 D6 43 75 8D 43 64
+44A8:90 43 23 93 43 78 34 43
+44B0:24 36 43 26 45 43 40 47
+44B8:43 4F 0F 44 6F 12 44 70
+44C0:52 44 73 3F 44 61 57 43
 
 */
 
@@ -1122,7 +1121,7 @@ DEBUG .sprintf( "PrintStrA() @ %X", * )
                 BNE _PrintStrA
                 INC _temp+1
                 BRA _PrintStrA
-        @_LastChar:             ; intentional fall into Print
+        @_LastChar:             ; intentional fall into ForceHighBit Print
     .endif ; USE_STR_A
 .endif  ; ENABLE_STR
 
@@ -1132,7 +1131,7 @@ DEBUG .sprintf( "PrintStrA() @ %X", * )
 ; Note: The dummy address $C0DE is to force the assembler
 ; to generate a 16-bit address instead of optimizing a ZP operand
 
-ForceAPPLE
+ForceHighBit
         ORA #$80
 Print                   ; print literal chars
         JSR PutChar
@@ -1156,7 +1155,7 @@ GetNumFeatures
         LDX #NumMeta*3  ; pos = meta
 .else
         .out "INFO: No meta commands, defaulting to text"
-        BRA ForceAPPLE
+        BRA ForceHighBit
 .endif
 
 .if NumMeta
@@ -1247,10 +1246,36 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
                 JSR PrintHexByte
                 DEY
                 BPL @EvenBCD
+.endif
+
+_JumpNextFormat1
                 BRA NextFormat  ; always
 
-.endif  ; ENABLE_DEC
+.if ENABLE_DEC
 
+; b Print a signed byte in decimal
+; ======================================================================
+    .if USE_DEC_BYTE
+DEBUG .sprintf( "PrintDecB() @ %X", * )
+        PrintByte:
+                JSR NxtArgYX    ; X = low byte, Y=A high byte
+                TXA
+                BPL PrintBytePos
+                LDA #'-' + $80  ; X >= $80 --> $80 (-128) .. $FF (-1)
+                JSR PutChar
+                TXA
+                EOR #$FF        ; 2's complement
+                TAX
+                INX
+        PrintBytePos:
+                STX _temp+0     ; needs XYtoTemp setup
+                STZ _temp+1     ; 00XX
+                LDA #3/2        ; 3 digits max
+                STA _nDecWidth
+                BRA PrintDecYX
+    .endif ; USE_DEC_BYTE
+
+.endif  ; ENABLE_DEC
 
 
 ; ______________________________________________________________________
@@ -1295,33 +1320,11 @@ DEBUG .sprintf( "PrintBinA() @ %X", * )
 .endif  ; ENABLE_BIN
 
 ; Left as exercise for the reader to optimize the jump size :-)
-_JumpNextFormat
+; 2 bytes short of BRA NextFormat
+_JumpNextFormat2
 ;       BRA NextFormat  ; always
-        JMP NextFormat  ; JMP :-(
-
-; b Print a signed byte in decimal
-; ======================================================================
-.if ENABLE_DEC
-    .if USE_DEC_BYTE
-DEBUG .sprintf( "PrintDecB() @ %X", * )
-        PrintByte:
-                JSR NxtArgYX    ; X = low byte, Y=A high byte
-                TXA
-                BPL PrintBytePos
-                LDA #'-' + $80  ; X >= $80 --> $80 (-128) .. $FF (-1)
-                JSR PutChar
-                TXA
-                EOR #$FF        ; 2's complement
-                TAX
-                INX
-        PrintBytePos:
-                STX _temp+0     ; needs XYtoTemp setup
-                STZ _temp+1     ; 00XX
-                LDA #3/2        ; 3 digits max
-                STA _nDecWidth
-                JMP PrintDecYX
-    .endif ; USE_DEC_BYTE
-.endif  ; ENABLE_DEC
+;       JMP NextFormat  ; JMP :-(
+        BRA _JumpNextFormat1
 
 ; ______________________________________________________________________
 
@@ -1370,7 +1373,7 @@ DEBUG .sprintf( "PrintOct3() @ %X", * )
 ; ======================================================================
 PrintReverseBCD
         DEX
-        BMI _JumpNextFormat
+        BMI _JumpNextFormat1
         LDA _bcd, X
         JSR PutChar
         BRA PrintReverseBCD
@@ -1389,7 +1392,7 @@ DEBUG .sprintf( "PrintStrC() @ %X", * )
                 LDY #$0
         @_NextByte:
                 LDA (_temp),Y
-                BEQ _JumpNextFormat
+                BEQ _JumpNextFormat1
                 JSR PutChar
                 INY
                 BNE @_NextByte
@@ -1408,7 +1411,7 @@ DEBUG .sprintf( "PrintStrP() @ %X", * )
 
                 LDY #$0
                 LDA (_temp),Y
-                BEQ _JumpNextFormat
+                BEQ _JumpNextFormat2
                 TAX
         _PrintStrP:
                 INY
@@ -1416,7 +1419,7 @@ DEBUG .sprintf( "PrintStrP() @ %X", * )
                 JSR PutChar
                 DEX
                 BNE _PrintStrP
-                BEQ _JumpNextFormat ; always
+                BEQ _JumpNextFormat2 ; always
     .endif
 .endif  ; ENABLE_STR
 
