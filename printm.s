@@ -5,7 +5,7 @@
 .feature leading_dot_in_identifiers
 .PC02 ; 65C02
 
-/* Version 34
+/* Version 35
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -99,7 +99,7 @@ don't need "every" feature. Seriously, when was the last time
 you _needed_ octal? :-)
 
 printm() has manually been optimized for size. In gcc parlance, `-Os`.
-With everything enabled printm() takes up $1C7 = 455 bytes
+With everything enabled printm() takes up $1C2 = 450 bytes
 (Plus 2 bytes in zero page.)
 
 Whoa! I thought you said this was micro!?
@@ -1238,9 +1238,6 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
                 JSR NxtArgYX
 
         PrintDecYX:
-                STX _val+0      ; may be tempting to move this to NxtArgYX
-                STY _val+1      ; as XYtoVal but others call us
-
                 STZ _bcd+0
                 STZ _bcd+1
                 STZ _bcd+2
@@ -1249,8 +1246,8 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
                 LDX   #16       ; 16 bits
                 SED             ; "Double Dabble"
         @Dec2BCD:               ; https://en.wikipedia.org/wiki/Double_dabble
-                ASL _val+0
-                ROL _val+1
+                ASL _temp+0
+                ROL _temp+1
 
                 LDY #$FD        ; $00-$FD=-3 bcd[0] bcd[1] bcd[2] bcd[3]
         @DoubleDabble:          ;              Y=FD   Y=FE   Y=FF   Y=00
@@ -1309,7 +1306,7 @@ DEBUG .sprintf( "PrintBinA() @ %X", * )
 
         _PrintBin:
                 STA _PrintBit+1
-                JSR NxtArgYX    ; X = low byte
+                JSR NxtArgYX    ; X = low byte, Y=A = high byte
 
                 LDY #8          ; print 8 bits
         _Bit2Asc:
@@ -1337,7 +1334,7 @@ _JumpNextFormat
     .if USE_DEC_BYTE
 DEBUG .sprintf( "PrintDecB() @ %X", * )
         PrintByte:
-                JSR NxtArgYX    ; X = low byte
+                JSR NxtArgYX    ; X = low byte, Y=A high byte
                 TXA
                 BPL PrintBytePos
                 LDA #'-' + $80  ; X >= $80 --> $80 (-128) .. $FF (-1)
@@ -1347,11 +1344,11 @@ DEBUG .sprintf( "PrintDecB() @ %X", * )
                 TAX
                 INX
         PrintBytePos:
-
-                LDY #00         ; 00XX
+                STX _temp+0     ; needs XYtoTemp setup
+                STZ _temp+1     ; 00XX
                 LDA #3/2        ; 3 digits max
                 STA _nDecWidth
-                JMP PrintDecYX  ; needs XYtoVal setup
+                JMP PrintDecYX
     .endif ; USE_DEC_BYTE
 .endif  ; ENABLE_DEC
 
