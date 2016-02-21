@@ -5,7 +5,7 @@
 .feature leading_dot_in_identifiers
 .PC02 ; 65C02
 
-/* Version 33
+/* Version 34
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -99,12 +99,57 @@ don't need "every" feature. Seriously, when was the last time
 you _needed_ octal? :-)
 
 printm() has manually been optimized for size. In gcc parlance, `-Os`.
-With everything enabled printm() takes up $1C9 = 457 bytes
+With everything enabled printm() takes up $1C7 = 455 bytes
 (Plus 2 bytes in zero page.)
 
 Whoa! I thought you said this was micro!?
 
-With all 15 features turned OFF the core routines use $62 = 98 bytes.
+Believe me it is.  Here are some of the optimization tricks used:
+
+1) Using BIT to skip instructions in common entry point
+
+    EntryPointA     SEC
+                    db BIT_ZP ; skip over next instruction
+    EntryPointB
+                    CLC
+                    ...common set up code...
+                    BCC _CodeForA
+    _CodeForB
+    _CodeForA
+    _CodeForAll
+
+2) Self-modifying code for dynamic width
+
+    EntryPointA     LDA n1
+                    db BIT_ABS  ; skip next instruction
+    EntryPointB     LDA n2      ; intentional fall into common code
+
+    _SetWidth       STA _DynamicWidth+1
+                    LDX #0
+                    ...code...
+    _DynamicWidth
+                    CPX #n
+
+3) No CMPs to preserve the Carry flag for common entry points
+
+4) Jump table is 3 bytes/entry, using 65C02: JUMP (FUNCS+1,X)
+
+    char, word_ptr_to_func
+
+5) A negative buffer offset so that a register will reach zero
+   and we can test for end of processing without using a CMP
+   which would trash the carry:
+
+                LDY #$FD        ; $00-$FD=-3 bcd[0] bcd[1] bcd[2] bcd[3]
+        @DoubleDabble:          ;              Y=FD   Y=FE   Y=FF   Y=00
+                LDA _bcd-$FD,Y
+                ADC _bcd-$FD,Y
+                STA _bcd-$FD,Y
+                INY
+                BNE @DoubleDabble
+        ; When Y=0, we'll be at _bcd[3]
+
+With all 15 features turned OFF the core routines use $60 = 96 bytes.
 
 With the common setting (default) features:
     BinAsc, Dec2, Dec3, Dec5, Hex2, Hex4, and StrA
@@ -122,21 +167,21 @@ To toggle features on / off change USE_* to 0 or 1:
 ;            core _PrintDec routine.
 ;
 ;           Feature  Size Bytes  Total           Notes
-USE_BIN_ASC     = 1 ; $7E 126 \. $84 (132 bytes)
-USE_BIN_INV     = 0 ; $7E 126 /
-USE_DEC_2       = 1 ; $D5 213 \
-USE_DEC_3       = 1 ; $D5 213  \.$FE (254 bytes)
+USE_BIN_ASC     = 1 ; $7C 124 \. $82 (130 bytes)
+USE_BIN_INV     = 1 ; $7C 124 /
+USE_DEC_2       = 1 ; $D3 211 \
+USE_DEC_3       = 1 ; $D3 213  \.$FE (254 bytes)
 USE_DEC_5       = 1 ; $D5 213  /
-USE_DEC_BYTE    = 0 ; $ED 237 /                  sets ENABLE_DEC
+USE_DEC_BYTE    = 1 ; $EB 235 /                  sets ENABLE_DEC
 USE_HEX_2       = 1 ; $99 153 \. $9E (158 bytes)
 USE_HEX_4       = 1 ; $99 153 /
-USE_OCT_3       = 0 ; $92 146 \. $98 (152 bytes)
-USE_OCT_6       = 0 ; $92 146 /
-USE_PTR_2       = 0 ; $A8 168 \. $AD (173 bytes) sets ENABLE_HEX
-USE_PTR_4       = 0 ; $A8 168 /
+USE_OCT_3       = 1 ; $92 146 \. $98 (152 bytes)
+USE_OCT_6       = 1 ; $92 146 /
+USE_PTR_2       = 1 ; $A8 168 \. $AD (173 bytes) sets ENABLE_HEX
+USE_PTR_4       = 1 ; $A8 168 /
 USE_STR_A       = 1 ; $78 120 \
-USE_STR_C       = 0 ; $78 120  > $A6 (166 bytes)
-USE_STR_PASCAL  = 0 ; $7A 122 /
+USE_STR_C       = 1 ; $78 120  > $A6 (166 bytes)
+USE_STR_PASCAL  = 1 ; $7A 122 /
 
 /*
 
@@ -181,23 +226,23 @@ Demo (All features) + Library text dump:
 4120:DA FD AD 0D 43 85 FE 20
 4128:DA FD 20 AB 41 20 4D 41
 4130:A2 F2 A0 42 20 8F 41 AE
-4138:6E 43 86 FE 64 FF 8A 20
+4138:85 43 86 FE 64 FF 8A 20
 4140:DA FD 20 AB 41 20 4D 41
-4148:A9 8D 4C ED FD 9C A3 44
-4150:9C A4 44 9C A5 44 A2 10
+4148:A9 8D 4C ED FD 9C A1 44
+4150:9C A2 44 9C A3 44 A2 10
 4158:F8 06 FE 26 FF A0 FD B9
-4160:A6 43 79 A6 43 99 A6 43
+4160:A4 43 79 A4 43 99 A4 43
 4168:C8 D0 F4 CA D0 EB D8 A2
-4170:05 88 B9 A6 43 4A 4A 4A
+4170:05 88 B9 A4 43 4A 4A 4A
 4178:4A 18 69 B0 20 ED FD CA
-4180:B9 A6 43 29 0F 18 69 B0
+4180:B9 A4 43 29 0F 18 69 B0
 4188:20 ED FD CA 10 E3 60 86
 4190:FC 84 FD A0 00 B1 FC F0
 4198:06 20 ED FD C8 D0 F6 60
 41A0:A2 08 85 FE 06 FE 6A CA
 41A8:D0 FA 60 A9 A0 4C ED FD
 41B0:98 20 C1 FB A6 28 A4 29
-41B8:8E 86 44 8C 87 44 60 D8
+41B8:8E 9B 44 8C 9C 44 60 D8
 41C0:BD 23 A0 D9 BD 64 A0 A4
 41C8:BD 78 BA 40 A0 25 FE 3F
 41D0:00 BF 41 27 00 BF 00 DE
@@ -239,64 +284,64 @@ Demo (All features) + Library text dump:
 42F0:A4 00 A0 E2 F9 F4 E5 F3
 42F8:8D A0 A0 A0 A0 AE E6 E5
 4300:E1 F4 F5 F2 E5 F3 A0 BD
-4308:A0 A4 A0 A0 00 C9 01 8E
-4310:93 44 8C 94 44 9C 91 44
-4318:20 8C 44 8E 67 43 8C 68
-4320:43 80 43 38 A9 18 20 8C
-4328:44 90 03 20 60 44 8A 20
-4330:60 44 80 2A 38 A9 18 20
-4338:8C 44 A0 00 B1 FE 90 EF
-4340:AA C8 B1 FE 80 E5 20 8C
-4348:44 A0 00 B1 FE 10 0A 20
-4350:85 44 C8 D0 F6 E6 FF 80
-4358:F2 09 80 20 85 44 EE 67
-4360:43 D0 03 EE 68 43 AD DE
-4368:C0 F0 12 30 EE A2 0F CA
-4370:30 EC DD AB 44 D0 F8 8A
-4378:0A AA 7C BA 44 60 A9 02
-4380:2C A9 01 2C A9 00 8D B7
-4388:43 20 8C 44 8E A9 44 8C
-4390:AA 44 9C A3 44 9C A4 44
-4398:9C A5 44 A2 10 F8 0E A9
-43A0:44 2E AA 44 A0 FD B9 A6
-43A8:43 79 A6 43 99 A6 43 C8
-43B0:D0 F4 CA D0 E9 D8 A0 03
-43B8:F0 0A B9 A3 44 20 6D 44
-43C0:20 85 44 88 B9 A3 44 20
-43C8:60 44 88 10 F7 80 8F A9
-43D0:31 2C A9 B1 8D E4 43 20
-43D8:8C 44 A0 08 8A 0A AA A9
-43E0:B0 90 02 A9 B1 20 85 44
-43E8:88 D0 F1 4C 5E 43 20 8C
-43F0:44 8A 10 0A A9 AD 20 85
-43F8:44 8A 49 FF AA E8 A0 00
-4400:A9 01 8D B7 43 4C 8C 43
-4408:A9 06 2C A9 03 8D 2A 44
-4410:20 8C 44 A2 00 A5 FE 29
-4418:07 18 69 B0 9D A3 44 A0
-4420:03 46 FF 66 FE 88 D0 F9
-4428:E8 E0 06 D0 E8 CA 30 BB
-4430:BD A3 44 20 85 44 80 F5
-4438:20 8C 44 A0 00 B1 FE F0
-4440:AA 20 85 44 C8 D0 F6 E6
-4448:FF 80 F2 20 8C 44 A0 00
-4450:B1 FE F0 97 AA C8 B1 FE
-4458:20 85 44 CA D0 F7 F0 8B
-4460:20 6D 44 A5 FE 20 85 44
-4468:A5 FF 4C 85 44 48 4A 4A
-4470:4A 4A 20 78 44 85 FE 68
-4478:29 0F C9 0A 90 02 69 06
-4480:69 B0 85 FF 60 8D DE C0
-4488:EE 86 44 60 20 90 44 AA
-4490:A0 00 B9 DE C0 EE 91 44
-4498:D0 03 EE 94 44 A8 86 FE
-44A0:84 FF 60 00 00 00 00 00
-44A8:00 00 00 3F 25 62 75 64
-44B0:23 78 24 26 40 4F 6F 70
-44B8:73 61 CF 43 D2 43 EE 43
-44C0:7E 43 81 43 84 43 23 43
-44C8:25 43 34 43 36 43 08 44
-44D0:0B 44 4B 44 38 44 46 43
+4308:A0 A4 A0 A0 00 C7 01 8E
+4310:2A 43 8C 2B 43 9C 28 43
+4318:20 23 43 8E 7E 43 8C 7F
+4320:43 80 5A 20 27 43 AA A0
+4328:00 B9 DE C0 EE 28 43 D0
+4330:03 EE 2B 43 A8 86 FE 84
+4338:FF 60 38 A9 18 20 23 43
+4340:90 03 20 75 44 8A 20 75
+4348:44 80 2A 38 A9 18 20 23
+4350:43 A0 00 B1 FE 90 EF AA
+4358:C8 B1 FE 80 E5 20 23 43
+4360:A0 00 B1 FE 10 0A 20 9A
+4368:44 C8 D0 F6 E6 FF 80 F2
+4370:09 80 20 9A 44 EE 7E 43
+4378:D0 03 EE 7F 43 AD DE C0
+4380:F0 B7 30 EE A2 2D CA CA
+4388:CA 30 EA DD A9 44 D0 F6
+4390:7C AA 44 A9 02 2C A9 01
+4398:2C A9 00 8D CC 43 20 23
+43A0:43 8E A7 44 8C A8 44 9C
+43A8:A1 44 9C A2 44 9C A3 44
+43B0:A2 10 F8 0E A7 44 2E A8
+43B8:44 A0 FD B9 A4 43 79 A4
+43C0:43 99 A4 43 C8 D0 F4 CA
+43C8:D0 E9 D8 A0 03 F0 0A B9
+43D0:A1 44 20 82 44 20 9A 44
+43D8:88 B9 A1 44 20 75 44 88
+43E0:10 F7 80 91 A9 31 2C A9
+43E8:B1 8D F9 43 20 23 43 A0
+43F0:08 8A 0A AA A9 B0 90 02
+43F8:A9 B1 20 9A 44 88 D0 F1
+4400:4C 75 43 20 23 43 8A 10
+4408:0A A9 AD 20 9A 44 8A 49
+4410:FF AA E8 A0 00 A9 01 8D
+4418:CC 43 4C A1 43 A9 06 2C
+4420:A9 03 8D 3F 44 20 23 43
+4428:A2 00 A5 FE 29 07 18 69
+4430:B0 9D A1 44 A0 03 46 FF
+4438:66 FE 88 D0 F9 E8 E0 06
+4440:D0 E8 CA 30 BB BD A1 44
+4448:20 9A 44 80 F5 20 23 43
+4450:A0 00 B1 FE F0 AA 20 9A
+4458:44 C8 D0 F6 E6 FF 80 F2
+4460:20 23 43 A0 00 B1 FE F0
+4468:97 AA C8 B1 FE 20 9A 44
+4470:CA D0 F7 F0 8B 20 82 44
+4478:A5 FE 20 9A 44 A5 FF 4C
+4480:9A 44 48 4A 4A 4A 4A 20
+4488:8D 44 85 FE 68 29 0F C9
+4490:0A 90 02 69 06 69 B0 85
+4498:FF 60 8D DE C0 EE 9B 44
+44A0:60 00 00 00 00 00 00 00
+44A8:00 3F E4 43 25 E7 43 62
+44B0:03 44 75 93 43 64 96 43
+44B8:23 99 43 78 3A 43 24 3C
+44C0:43 26 4B 43 40 4D 43 4F
+44C8:1D 44 6F 20 44 70 60 44
+44D0:73 4D 44 61 5D 43
 
 */
 
@@ -942,17 +987,13 @@ __PRINTM
 ; self-modifying variable aliases
         _pScreen     = PutChar   +1
         _pFormat     = GetFormat +1
-        _iArg        = NxtArgByte+1
-        _pArg        = IncArg    +1
+        _pArg        = NxtArgByte+1
 .if ENABLE_DEC
         _nDecWidth   = DecWidth  +1
 .endif
 .if ENABLE_OCT
         _nOctWidth   = OctWidth  +1
 .endif
-;.if ENABLE_HEX
-;        _nHexWidth   = HexWidth  +1
-;.endif
 
 ; Entry Point
 ; ======================================================================
@@ -961,13 +1002,38 @@ __PRINTM
 PrintM
         STX _pArg+0
         STY _pArg+1
-        STZ _iArg
-
-NextArg
+FirstArg
         JSR NxtArgYX
         STX _pFormat+0  ; lo
         STY _pFormat+1  ; hi
         BRA GetFormat   ; always
+
+; ======================================================================
+; @return next arg as 16-bit arg value in Y,X
+NxtArgToTemp
+NxtArgYX
+        JSR NxtArgByte
+        TAX
+
+; @return _Arg[ _Num ]
+NxtArgByte
+        LDA $C0DE       ; _pArg NOTE: self-modifying!
+        INC _pArg       ;
+        BNE @_SamePage
+        INC _pArg+1     ;
+@_SamePage
+        TAY
+
+; Callers of NxtToArgYX don't use _temp
+_NxtArgToTemp
+        STX _temp+0     ; zero-page for (ZP),Y
+        STY _temp+1
+
+;XYtoVal
+;        STX _val+0      ; may be tempting to move this to NxtArgYX
+;        STY _val+1      ;
+_Done
+        RTS
 
 
 ; $ Hex 2 Byte
@@ -1118,7 +1184,7 @@ GetFormat
 ; Instead we count the number of features enabled
 GetNumFeatures
 .if (NumMeta > 0)
-        LDX #NumMeta  ; pos = meta
+        LDX #NumMeta*3  ; pos = meta
 .else
         .out "INFO: No meta commands, defaulting to text"
         BRA ForceAPPLE
@@ -1126,16 +1192,13 @@ GetNumFeatures
 
 FindMeta
         DEX
+        DEX
+        DEX
         BMI NextFormat
-        CMP MetaChar,X
+        CMP MetaTable,X
         BNE FindMeta
 CallMeta
-        TXA
-        ASL
-        TAX
-        JMP (MetaFunc,X)
-_Done
-        RTS
+        JMP (MetaTable+1,X)
 
 ; ______________________________________________________________________
 
@@ -1189,8 +1252,8 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
                 ASL _val+0
                 ROL _val+1
 
-                LDY #$FD
-        @DoubleDabble:
+                LDY #$FD        ; $00-$FD=-3 bcd[0] bcd[1] bcd[2] bcd[3]
+        @DoubleDabble:          ;              Y=FD   Y=FE   Y=FF   Y=00
                 LDA _bcd-$FD,Y
                 ADC _bcd-$FD,Y
                 STA _bcd-$FD,Y
@@ -1201,12 +1264,12 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
                 BNE @Dec2BCD
                 CLD
 
-.if 1 ; NEW_PRINT_DEC
         DecWidth:
                 LDY #3          ; default to 6 digits
-                BEQ @EvenBCD
-        ; Print low nibble, skip high nibble
-        @OddBCD:                ; X = num digits to print
+                BEQ @EvenBCD    ; special case 0 -> only 2 digits
+                                ; otherwise have odd digits, 
+                                ; Print low nibble, skip high nibble
+        @OddBCD:                ; Y = num digits/2 to print
                 LDA _bcd,Y      ; __c???   _b_?XX   a_YYXX
                 JSR HexA
                 JSR PutChar
@@ -1217,29 +1280,6 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
                 DEY
                 BPL @EvenBCD
                 BRA NextFormat  ; always
-.else
-                LDX #5          ; was Y, default to 6 digits
-        @BCD2Char:              ; NOTE: Digits are reversed!
-                LDA _bcd,Y      ; __c???   _b_?XX   a_YYXX
-                LSR
-                LSR
-                LSR
-                LSR
-                CLC
-                ADC #'0'+$80
-                STA _bcd,X      ; __c??X   _b_YXX   aZYYXX
-                DEX             ; was Y
-        @BCDBotNib:
-                LDA _bcd,Y      ; __c??X   _b_YXX   aZYYXX
-                AND #$F
-                CLC
-                ADC #'0'+$80
-                STA _bcd,X      ; __c?XX   _bYYXX   ZZYYXX
-                DEX
-                BPL @BCD2Char
-        DecWidth:
-                LDX #5      ; _nDecDigits NOTE: self-modifying!
-.endif
 
 .endif  ; ENABLE_DEC
 
@@ -1326,7 +1366,6 @@ DEBUG .sprintf( "PrintOct6() @ %X", * )
         PrintOct6:
                 LDA #6
         .if USE_OCT_3
-                ;BNE _PrintOct
                 db $2C          ; BIT $abs skip next instruction
         .endif
     .endif
@@ -1460,155 +1499,84 @@ PutChar
         JMP COUT
 .endif
 
-; ======================================================================
-; @return next arg as 16-bit arg value in Y,X
-NxtArgToTemp
-NxtArgYX
-        JSR NxtArgByte
-        TAX
-
-; @return _Arg[ _Num ]
-NxtArgByte
-        LDY #00         ; _iArg NOTE: self-modifying!
-IncArg
-        LDA $C0DE,Y     ; _pArg NOTE: self-modifying!
-        INC _iArg       ;
-        BNE @_SamePage
-        INC _pArg+1     ;
-@_SamePage
-        TAY
-
-; Callers of NxtToArgYX don't use _temp
-_NxtArgToTemp
-        STX _temp+0     ; zero-page for (ZP),Y
-        STY _temp+1
-
-;XYtoVal
-;        STX _val+0      ; may be tempting to move this to NxtArgYX
-;        STY _val+1      ;
-
-        RTS
-
 ;
 ; ======================================================================
 
 _bcd    ds  6   ; 6 chars for printing dec
 _val    dw  0   ; PrintHex2 PrintHex4 temp
 
-MetaChar
+MetaTable
 
 .if ENABLE_BIN
     .if USE_BIN_INV
         db '?'  ; PrintBinInv   NOTE: 1's printed in inverse
-    .endif
-    .if USE_BIN_ASC
-        db '%'  ; PrintBinAsc
-    .endif
-.endif
-.if ENABLE_DEC
-    .if USE_DEC_BYTE
-        db 'b'  ; PrintByte     NOTE: Signed -128 .. +127
-    .endif
-    .if USE_DEC_5
-        db 'u'  ; PrintDec5
-    .endif
-    .if USE_DEC_3
-        db 'd'  ; PrintDec3
-    .endif
-    .if USE_DEC_2
-        db '#'  ; PrintDec2
-    .endif
-.endif
-.if ENABLE_HEX
-    .if USE_HEX_4
-        db 'x'  ; PrintHex4
-    .endif
-    .if USE_HEX_2
-        db '$'  ; PrintHex2
-    .endif
-    .if USE_PTR_4
-        db '&'  ; PrintPtr4
-    .endif
-    .if USE_PTR_2
-        db '@'  ; PrintPtr2
-    .endif
-.endif
-.if ENABLE_OCT
-    .if USE_OCT_6
-        db 'O'  ; PrintOct6
-    .endif
-    .if USE_OCT_3
-        db 'o'  ; PrintOct3
-    .endif
-.endif
-.if ENABLE_STR
-    .if USE_STR_PASCAL
-        db 'p'  ; PrintStrP     NOTE: Pascal string; C printf 'p' is pointer!
-    .endif
-    .if USE_STR_C
-        db 's'  ; PrintStrC     NOTE: C string, zero terminated
-    .endif
-    .if USE_STR_A
-        db 'a'  ; PrintStrA     NOTE: Last byte is ASCII
-    .endif
-.endif
-
-_MetaCharEnd
-
-MetaFunc
-
-.if ENABLE_BIN
-    .if USE_BIN_INV
         dw PrintBinInv
     .endif
     .if USE_BIN_ASC
+        db '%'  ; PrintBinAsc
         dw PrintBinAsc
     .endif
 .endif
+
 .if ENABLE_DEC
     .if USE_DEC_BYTE
+        db 'b'  ; PrintByte     NOTE: Signed -128 .. +127
         dw PrintByte
     .endif
     .if USE_DEC_5
+        db 'u'  ; PrintDec5
         dw PrintDec5
     .endif
     .if USE_DEC_3
+        db 'd'  ; PrintDec3
         dw PrintDec3
     .endif
     .if USE_DEC_2
+        db '#'  ; PrintDec2
         dw PrintDec2
     .endif
 .endif
+
 .if ENABLE_HEX
     .if USE_HEX_4
+        db 'x'  ; PrintHex4
         dw PrintHex4
     .endif
     .if USE_HEX_2
+        db '$'  ; PrintHex2
         dw PrintHex2
     .endif
     .if USE_PTR_4
+        db '&'  ; PrintPtr4
         dw PrintPtr4
     .endif
     .if USE_PTR_2
+        db '@'  ; PrintPtr2
         dw PrintPtr2
     .endif
 .endif
+
 .if ENABLE_OCT
     .if USE_OCT_6
+        db 'O'  ; PrintOct6
         dw PrintOct6
     .endif
     .if USE_OCT_3
+        db 'o'  ; PrintOct3
         dw PrintOct3
     .endif
 .endif
 .if ENABLE_STR
     .if USE_STR_PASCAL
+        db 'p'  ; PrintStrP     NOTE: Pascal string; C printf 'p' is pointer!
         dw PrintStrP
     .endif
     .if USE_STR_C
+        db 's'  ; PrintStrC     NOTE: C string, zero terminated
         dw PrintStrC
     .endif
     .if USE_STR_A
+        db 'a'  ; PrintStrA     NOTE: Last byte is ASCII
         dw PrintStrA
     .endif
 .endif
@@ -1618,5 +1586,5 @@ __END
 DEBUG .sprintf( "_bcd @ %X", _bcd )
 DEBUG .sprintf( "Total  size: %X (%d bytes)", __END   -__MAIN, __END   -__MAIN)
 DEBUG .sprintf( "Demo   size: %X (%d bytes)", __PRINTM-__MAIN, __PRINTM-__MAIN)
-DEBUG .sprintf( "printm size: %X (%d bytes)", __LIB_SIZE     , __LIB_SIZE     )
+.out  .sprintf( "printm size: %X (%d bytes)", __LIB_SIZE     , __LIB_SIZE     )
 
