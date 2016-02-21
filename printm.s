@@ -5,7 +5,7 @@
 .feature leading_dot_in_identifiers
 .PC02 ; 65C02
 
-/* Version 32
+/* Version 33
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -108,7 +108,7 @@ With all 15 features turned OFF the core routines use $62 = 98 bytes.
 
 With the common setting (default) features:
     BinAsc, Dec2, Dec3, Dec5, Hex2, Hex4, and StrA
-the size is $13E = 318 bytes
+the size is $12A = 298 bytes
 
 To toggle features on / off change USE_* to 0 or 1:
 
@@ -122,25 +122,25 @@ To toggle features on / off change USE_* to 0 or 1:
 ;            core _PrintDec routine.
 ;
 ;           Feature  Size Bytes  Total           Notes
-USE_BIN_ASC     = 1 ; $7E 126 \. $85 (134 bytes)
-USE_BIN_INV     = 1 ; $7E 126 /
-USE_DEC_2       = 1 ; $C7 199 \
-USE_DEC_3       = 1 ; $C7 199  \.$F0 (240 bytes)
-USE_DEC_5       = 1 ; $C7 199  /
-USE_DEC_BYTE    = 1 ; $DF 223 /                  sets ENABLE_DEC
+USE_BIN_ASC     = 1 ; $7E 126 \. $84 (132 bytes)
+USE_BIN_INV     = 0 ; $7E 126 /
+USE_DEC_2       = 1 ; $D5 213 \
+USE_DEC_3       = 1 ; $D5 213  \.$FE (254 bytes)
+USE_DEC_5       = 1 ; $D5 213  /
+USE_DEC_BYTE    = 0 ; $ED 237 /                  sets ENABLE_DEC
 USE_HEX_2       = 1 ; $99 153 \. $9E (158 bytes)
 USE_HEX_4       = 1 ; $99 153 /
-USE_OCT_3       = 1 ; $97 151 \. $9D (157 bytes)
-USE_OCT_6       = 1 ; $97 151 /
-USE_PTR_2       = 1 ; $B1 177 \. $B7 (183 bytes) sets ENABLE_HEX
-USE_PTR_4       = 1 ; $B1 177 /
+USE_OCT_3       = 0 ; $92 146 \. $98 (152 bytes)
+USE_OCT_6       = 0 ; $92 146 /
+USE_PTR_2       = 0 ; $A8 168 \. $AD (173 bytes) sets ENABLE_HEX
+USE_PTR_4       = 0 ; $A8 168 /
 USE_STR_A       = 1 ; $78 120 \
-USE_STR_C       = 1 ; $78 120  > $A6 (166 bytes)
-USE_STR_PASCAL  = 1 ; $7A 122 /
+USE_STR_C       = 0 ; $78 120  > $A6 (166 bytes)
+USE_STR_PASCAL  = 0 ; $7A 122 /
 
 /*
 
-Demo + Library text dump:
+Demo (All features) + Library text dump:
 
 4000:20 58 FC A9 20 85 E6 A9
 4008:D5 8D 00 20 A9 AA 8D 01
@@ -1203,7 +1203,7 @@ DEBUG .sprintf( "PrintDec2() @ %X", * )
 
 .if 1 ; NEW_PRINT_DEC
         DecWidth:
-                LDY #3          ; was Y, default to 6 digits
+                LDY #3          ; default to 6 digits
                 BEQ @EvenBCD
         ; Print low nibble, skip high nibble
         @OddBCD:                ; X = num digits to print
@@ -1420,7 +1420,7 @@ DEBUG .sprintf( "PrintStrP() @ %X", * )
 .if ENABLE_HEX || ENABLE_DEC
 ; Converts A to Hex digits, prints them
 PrintHexByte:
-.out .sprintf( "PrintHexByte @ %X", * )
+DEBUG .sprintf( "PrintHexByte @ %X", * )
                 JSR HexA
                 LDA _temp+0
                 JSR PutChar
@@ -1614,9 +1614,8 @@ MetaFunc
 .endif
 
 __END
-.out .sprintf( "_bcd @ %X", _bcd )
-.out .sprintf( "printm size: %X (%d bytes)", __LIB_SIZE     , __LIB_SIZE     )
 
+DEBUG .sprintf( "_bcd @ %X", _bcd )
 DEBUG .sprintf( "Total  size: %X (%d bytes)", __END   -__MAIN, __END   -__MAIN)
 DEBUG .sprintf( "Demo   size: %X (%d bytes)", __PRINTM-__MAIN, __PRINTM-__MAIN)
 DEBUG .sprintf( "printm size: %X (%d bytes)", __LIB_SIZE     , __LIB_SIZE     )
