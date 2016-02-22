@@ -1104,7 +1104,7 @@ DEBUG .sprintf( "PrintStrA() @ %X", * )
                 JSR NxtArgToTemp
 
         _PrintStrA:
-                LDA (_temp),Y
+                LDA (_temp)
                 BPL @_LastChar
                 JSR PutChar
                 INC _temp+0
