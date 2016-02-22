@@ -5,7 +5,7 @@
 .feature leading_dot_in_identifiers
 .PC02 ; 65C02
 
-/* Version 37
+/* Version 38
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -99,7 +99,7 @@ don't need "every" feature. Seriously, when was the last time
 you _needed_ octal? :-)
 
 printm() has manually been optimized for size. In gcc parlance, `-Os`.
-With everything enabled printm() takes up $1BA = 442 bytes
+With everything enabled printm() takes up $1B6 = 438 bytes
 (Plus 2 bytes in zero page.)
 
 Whoa! I thought you said this was micro!?
@@ -168,20 +168,20 @@ To toggle features on / off change USE_* to 0 or 1:
 ;
 ;           Feature  Size Bytes  Total           Notes
 USE_BIN_ASC     = 1 ; $78 120 \. $7E (126 bytes)
-USE_BIN_INV     = 0 ; $78 119 /
+USE_BIN_INV     = 1 ; $78 119 /
 USE_DEC_2       = 1 ; $C5 197 \
 USE_DEC_3       = 1 ; $C5 197  \.$EF (239 bytes)
 USE_DEC_5       = 1 ; $C5 197  /
-USE_DEC_BYTE    = 0 ; $DE 222 /                  sets ENABLE_DEC
-USE_HEX_2       = 1 ; $93 147 \. $98 (152 bytes)
-USE_HEX_4       = 1 ; $93 147 /
-USE_OCT_3       = 0 ; $8C 140 \. $92 (146 bytes)
-USE_OCT_6       = 0 ; $8C 140 /
-USE_PTR_2       = 0 ; $A2 162 \. $A7 (167 bytes) sets ENABLE_HEX
-USE_PTR_4       = 0 ; $A2 162 /
+USE_DEC_BYTE    = 1 ; $DE 222 /                  sets ENABLE_DEC
+USE_HEX_2       = 1 ; $93 147 \. $96 (150 bytes)
+USE_HEX_4       = 1 ; $92 146 /
+USE_OCT_3       = 1 ; $8C 140 \. $92 (146 bytes)
+USE_OCT_6       = 1 ; $8C 140 /
+USE_PTR_2       = 1 ; $A2 162 \. $A5 (165 bytes) sets ENABLE_HEX
+USE_PTR_4       = 1 ; $A1 161 /
 USE_STR_A       = 1 ; $72 114 \
-USE_STR_C       = 0 ; $72 114  > $9F (159 bytes)
-USE_STR_PASCAL  = 0 ; $74 116 /
+USE_STR_C       = 1 ; $72 114  > $9F (159 bytes)
+USE_STR_PASCAL  = 1 ; $74 116 /
 
 /*
 
@@ -228,21 +228,21 @@ Demo (All features) + Library text dump:
 4130:A2 F1 A0 42 20 8E 41 A2
 4138:0F 86 FE 64 FF 8A 20 DA
 4140:FD 20 AA 41 20 4C 41 A9
-4148:8D 4C ED FD 9C 93 44 9C
-4150:94 44 9C 95 44 A2 10 F8
-4158:06 FE 26 FF A0 FD B9 96
-4160:43 79 96 43 99 96 43 C8
+4148:8D 4C ED FD 9C 8F 44 9C
+4150:90 44 9C 91 44 A2 10 F8
+4158:06 FE 26 FF A0 FD B9 92
+4160:43 79 92 43 99 92 43 C8
 4168:D0 F4 CA D0 EB D8 A2 05
-4170:88 B9 96 43 4A 4A 4A 4A
+4170:88 B9 92 43 4A 4A 4A 4A
 4178:18 69 B0 20 ED FD CA B9
-4180:96 43 29 0F 18 69 B0 20
+4180:92 43 29 0F 18 69 B0 20
 4188:ED FD CA 10 E3 60 86 FC
 4190:84 FD A0 00 B1 FC F0 06
 4198:20 ED FD C8 D0 F6 60 A2
 41A0:08 85 FE 06 FE 6A CA D0
 41A8:FA 60 A9 A0 4C ED FD 98
 41B0:20 C1 FB A6 28 A4 29 8E
-41B8:8D 44 8C 8E 44 60 D8 BD
+41B8:89 44 8C 8A 44 60 D8 BD
 41C0:23 A0 D9 BD 64 A0 A4 BD
 41C8:78 BA 40 A0 25 FE 3F 00
 41D0:BE 41 27 00 BF 00 DE C0
@@ -284,62 +284,62 @@ Demo (All features) + Library text dump:
 42F0:00 A0 E2 F9 F4 E5 F3 8D
 42F8:A0 A0 A0 A0 AE E6 E5 E1
 4300:F4 F5 F2 E5 F3 A0 BD A0
-4308:A4 A0 A0 00 BA 01 8E 24
+4308:A4 A0 A0 00 B6 01 8E 24
 4310:43 8C 25 43 20 1F 43 8E
-4318:78 43 8C 79 43 80 58 20
+4318:74 43 8C 75 43 80 54 20
 4320:23 43 AA AD DE C0 EE 24
 4328:43 D0 03 EE 25 43 A8 86
-4330:FE 84 FF 60 38 A9 18 20
-4338:1F 43 90 03 20 67 44 8A
-4340:20 67 44 80 2A 38 A9 18
-4348:20 1F 43 A0 00 B1 FE 90
-4350:EF AA C8 B1 FE 80 E5 20
-4358:1F 43 A0 00 B1 FE 10 0A
-4360:20 8C 44 C8 D0 F6 E6 FF
-4368:80 F2 09 80 20 8C 44 EE
-4370:78 43 D0 03 EE 79 43 AD
-4378:DE C0 F0 B7 30 EE A2 2D
-4380:CA CA CA 30 EA DD 9B 44
-4388:D0 F6 7C 9C 44 A9 02 2C
-4390:A9 01 2C A9 00 8D BE 43
-4398:20 1F 43 9C 93 44 9C 94
-43A0:44 9C 95 44 A2 10 F8 06
-43A8:FE 26 FF A0 FD B9 96 43
-43B0:79 96 43 99 96 43 C8 D0
-43B8:F4 CA D0 EB D8 A0 03 F0
-43C0:0A B9 93 44 20 74 44 20
-43C8:8C 44 88 B9 93 44 20 67
-43D0:44 88 10 F7 80 99 20 1F
-43D8:43 8A 10 0A A9 AD 20 8C
-43E0:44 8A 49 FF AA E8 86 FE
-43E8:64 FF A9 01 8D BE 43 80
-43F0:AA A9 31 2C A9 B1 8D 06
-43F8:44 20 1F 43 A0 08 8A 0A
-4400:AA A9 B0 90 02 A9 B1 20
-4408:8C 44 88 D0 F1 80 C5 A9
-4410:06 2C A9 03 8D 31 44 20
-4418:1F 43 A2 00 A5 FE 29 07
-4420:18 69 B0 9D 93 44 A0 03
-4428:46 FF 66 FE 88 D0 F9 E8
-4430:E0 06 D0 E8 CA 30 9D BD
-4438:93 44 20 8C 44 80 F5 20
-4440:1F 43 A0 00 B1 FE F0 8C
-4448:20 8C 44 C8 D0 F6 E6 FF
-4450:80 F2 20 1F 43 A0 00 B1
-4458:FE F0 B2 AA C8 B1 FE 20
-4460:8C 44 CA D0 F7 F0 A6 20
-4468:74 44 A5 FE 20 8C 44 A5
-4470:FF 4C 8C 44 48 4A 4A 4A
-4478:4A 20 7F 44 85 FE 68 29
-4480:0F C9 0A 90 02 69 06 69
-4488:B0 85 FF 60 8D DE C0 EE
-4490:8D 44 60 00 00 00 00 00
-4498:00 00 00 3F F1 43 25 F4
-44A0:43 62 D6 43 75 8D 43 64
-44A8:90 43 23 93 43 78 34 43
-44B0:24 36 43 26 45 43 40 47
-44B8:43 4F 0F 44 6F 12 44 70
-44C0:52 44 73 3F 44 61 57 43
+4330:FE 84 FF 60 18 20 1F 43
+4338:90 03 20 63 44 8A 20 63
+4340:44 80 28 18 20 1F 43 A0
+4348:00 B1 FE 90 F1 AA C8 B1
+4350:FE 80 E7 20 1F 43 A0 00
+4358:B1 FE 10 0A 20 88 44 C8
+4360:D0 F6 E6 FF 80 F2 09 80
+4368:20 88 44 EE 74 43 D0 03
+4370:EE 75 43 AD DE C0 F0 BB
+4378:30 EE A2 2D CA CA CA 30
+4380:EA DD 97 44 D0 F6 7C 98
+4388:44 A9 02 2C A9 01 2C A9
+4390:00 8D BA 43 20 1F 43 9C
+4398:8F 44 9C 90 44 9C 91 44
+43A0:A2 10 F8 06 FE 26 FF A0
+43A8:FD B9 92 43 79 92 43 99
+43B0:92 43 C8 D0 F4 CA D0 EB
+43B8:D8 A0 03 F0 0A B9 8F 44
+43C0:20 70 44 20 88 44 88 B9
+43C8:8F 44 20 63 44 88 10 F7
+43D0:80 99 20 1F 43 8A 10 0A
+43D8:A9 AD 20 88 44 8A 49 FF
+43E0:AA E8 86 FE 64 FF A9 01
+43E8:8D BA 43 80 AA A9 31 2C
+43F0:A9 B1 8D 02 44 20 1F 43
+43F8:A0 08 8A 0A AA A9 B0 90
+4400:02 A9 B1 20 88 44 88 D0
+4408:F1 80 C5 A9 06 2C A9 03
+4410:8D 2D 44 20 1F 43 A2 00
+4418:A5 FE 29 07 18 69 B0 9D
+4420:8F 44 A0 03 46 FF 66 FE
+4428:88 D0 F9 E8 E0 06 D0 E8
+4430:CA 30 9D BD 8F 44 20 88
+4438:44 80 F5 20 1F 43 A0 00
+4440:B1 FE F0 8C 20 88 44 C8
+4448:D0 F6 E6 FF 80 F2 20 1F
+4450:43 A0 00 B1 FE F0 B2 AA
+4458:C8 B1 FE 20 88 44 CA D0
+4460:F7 F0 A6 20 70 44 A5 FE
+4468:20 88 44 A5 FF 4C 88 44
+4470:48 4A 4A 4A 4A 20 7B 44
+4478:85 FE 68 29 0F C9 0A 90
+4480:02 69 06 69 B0 85 FF 60
+4488:8D DE C0 EE 89 44 60 00
+4490:00 00 00 00 00 00 00 3F
+4498:ED 43 25 F0 43 62 D2 43
+44A0:75 89 43 64 8C 43 23 8F
+44A8:43 78 35 43 24 34 43 26
+44B0:44 43 40 43 43 4F 0B 44
+44B8:6F 0E 44 70 4E 44 73 3B
+44C0:44 61 53 43
 
 */
 
@@ -1040,19 +1040,15 @@ _Done
 ; ======================================================================
 .if ENABLE_HEX
 
-    .if USE_HEX_4
-DEBUG .sprintf( "PrintHex4() @ %X", * )
-        PrintHex4:
-                SEC
-        .if USE_HEX_2
-                db $A9          ; LDA #imm skip next 1-byte instruction
-        .endif
-    .endif
-
     .if USE_HEX_2
 DEBUG .sprintf( "PrintHex2() @ %X", * )
         PrintHex2:
                 CLC
+    .endif
+
+    .if USE_HEX_4
+DEBUG .sprintf( "PrintHex4() @ %X", * )
+        PrintHex4:
     .endif
 
         ; Print 16-bit Y,X in hex
@@ -1074,19 +1070,14 @@ DEBUG .sprintf( "PrintHex2() @ %X", * )
 ; ======================================================================
 .if ENABLE_PTR
 
-    .if USE_PTR_4
-DEBUG .sprintf( "PrintPtr4() @ %X", * )
-        PrintPtr4:
-                SEC
-        .if USE_PTR_2
-                db $A9          ; LDA #imm skip next 1-byte instruction
-        .endif
-    .endif
-
     .if USE_PTR_2
 DEBUG .sprintf( "PrintPtr2() @ %X", * )
         PrintPtr2:
                 CLC
+    .endif
+    .if USE_PTR_4
+DEBUG .sprintf( "PrintPtr4() @ %X", * )
+        PrintPtr4:
     .endif
 
         _PrintPtr:
