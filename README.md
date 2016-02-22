@@ -5,6 +5,7 @@ Here is a *modular* _micro_ replacement: printm()
 * Literals have the high byte set (APPLE text)
 * Meta characters have the high bit cleared (ASCII)
 
+```
     $ Hex - print 2 Byte
     x Hex - print 4 Byte
 
@@ -25,6 +26,7 @@ Here is a *modular* _micro_ replacement: printm()
     a Str - APPLE text (high bit set), last char is ASCII
     s Str - C string, zero terminated
     p Str - Pascal string, first character is string length
+```
 
 Each option can individually be enabled / disabled
 to control the memory footprint since you probably
