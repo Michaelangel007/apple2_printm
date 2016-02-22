@@ -38,7 +38,15 @@ With everything enabled printm() takes up less then 512 bytes.
 
 See the latest code for the exact byte usage!
 
-Michael Pohoreski
-Copyleft {c} Feb, 2016
-Special Thanks: Sheldon for his 65C02 printf() source, qkumba optimizations
+* By: Michael Pohoreski
+* Copyleft {c} Feb, 2016
+
+Special Thanks: 
+
+* Sheldon for his 65C02 printf() source
+* qkumba optimizations
+
+Join the discussion in comp.sys.apple2.programmer
+
+* https://groups.google.com/forum/#!topic/comp.sys.apple2.programmer/cXqTp7YLYuo
 
