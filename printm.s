@@ -5,7 +5,7 @@
 .feature leading_dot_in_identifiers
 .PC02 ; 65C02
 
-/* Version 40
+/* Version 41
 printm - a modular micro printf replacement for 65C02
 Michael Pohoreski
 Copyleft {c} Feb, 2016
@@ -760,7 +760,7 @@ PrintDec
         BNE @Dec2BCD
         CLD
 
-        LDX #5          ; was Y
+        LDX #2          ; print 3 BCD bytes
 @BCD2Char:              ; NOTE: Digits are reversed!
         DEY             ; $FF - $FD = 2
         LDA _bcd-$FD,Y  ; __c???   _b_?XX   a_YYXX
@@ -771,7 +771,6 @@ PrintDec
         CLC
         ADC #'0'+$80
         JSR COUT        ; __c??X   _b_YXX   aZYYXX
-        DEX
         LDA _bcd-$FD,Y  ; __c??X   _b_YXX   aZYYXX
         AND #$F
         CLC
