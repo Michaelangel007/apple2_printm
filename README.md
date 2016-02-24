@@ -6,16 +6,16 @@ Here is a *modular* _micro_ replacement: printm()
 * Meta characters have the high bit cleared (ASCII)
 
 ```
-    $ Hex - print 2 Byte
-    x Hex - print 4 Byte
+    $ Hex - print 1 Byte  (2 characters)
+    x Hex - print 2 Bytes (4 characters)
 
-    @ Ptr - print hex byte at 16-bit pointer
-    & Ptr - print hex word at 16-bit pointer
+    @ Ptr - print hex 1 Byte  at 16-bit pointer
+    & Ptr - print hex 2 Bytes at 16-bit pointer
 
-    # Dec - Print 1 Byte in decimal (max 2 digits)
-    d Dec - Print 2 Byte in decimal (max 3 digits)
-    u Dec - Print 2 Byte in decimal (max 5 digits)
-    b Dec - Print signed byte in decimal
+    # Dec - Print 1 Byte  in decimal (max 2 digits)
+    d Dec - Print 1 Byte  in decimal (max 3 digits)
+    u Dec - Print 2 Bytes in decimal (max 5 digits)
+    b Dec - Print signed 1 Byte in decimal
 
     % Bin - Print 8 bits
     ? Bin - Print 8 bits but 1's in inverse
@@ -25,7 +25,7 @@ Here is a *modular* _micro_ replacement: printm()
 
     a Str - APPLE text (high bit set), last char is ASCII
     s Str - C string, zero terminated
-    p Str - Pascal string, first character is string length
+    p Str - Pascal string, first byte is string length
 ```
 
 Each option can individually be enabled / disabled
