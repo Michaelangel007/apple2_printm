@@ -1,5 +1,7 @@
 #printm - a modular micro printf replacement for 65C02
 
+![printm screenshot](print.png?raw=true)
+
 Here is a *modular* _micro_ replacement: printm()
 
 * Literals have the high byte set (APPLE text)
