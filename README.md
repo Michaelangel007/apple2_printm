@@ -1,6 +1,6 @@
 #printm - a modular micro printf replacement for 65C02
 
-![printm screenshot](print.png?raw=true)
+![printm screenshot](printm.png?raw=true)
 
 Here is a *modular* _micro_ replacement: printm()
 
